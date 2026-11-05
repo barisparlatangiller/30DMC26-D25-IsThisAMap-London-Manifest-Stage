@@ -171,7 +171,7 @@ function draw() {
   for (let it = 0; it < 40; it++) {
     let moved = false;
     for (let i = 0; i < D.length; i++) for (let j = i + 1; j < D.length; j++) {
-      const a = D[i], b = D[j]; let dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy); const need = (a.r + b.r) * 0.9;
+      const a = D[i], b = D[j]; let dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy); const need = (a.r + b.r) * 1.02;
       if (d < need) { if (d < 1e-3) { dx = 1; dy = 0; d = 1; } const push = (need - d) / 2; a.x -= dx / d * push; a.y -= dy / d * push; b.x += dx / d * push; b.y += dy / d * push; moved = true; }
     }
     for (const a of D) { a.x += (a.x0 - a.x) * 0.06; a.y += (a.y0 - a.y) * 0.06; }   // gentle pull back to the true spot
