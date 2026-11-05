@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Is a Stage a Map? Manifest at Wembley</title>
+<meta name="description" content="#30DayMapChallenge 2026 · Day 25 · Is this a map? Six performers of Manifest, mapped on the OVO Arena Wembley stage in sync with the live video.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="style.css?v=1" rel="stylesheet">
+</head>
+<body>
+<header>
+  <div class="eb">#30DayMapChallenge · Day 25 · Is this a map? · London</div>
+  <h1>Is a stage a map?</h1>
+  <p class="sub">Manifest, <i>Intro &amp; Hileli</i>, live at OVO Arena Wembley. Six performers, 4½ minutes, 24 × 24 m of stage:
+    each one leaves a trail of her own colour, and the song draws its own map.</p>
+</header>
+
+<main>
+  <section class="stagebox">
+    <div class="compass" aria-hidden="true">N ↑ <span>back of the stage</span></div>
+    <canvas id="stage" aria-label="Stage plan with the performers' positions and their accumulated heat"></canvas>
+    <div class="aud" aria-hidden="true">▼ audience ▼</div>
+    <div class="clock"><span id="clock">0:00</span><small id="clockNote">press play</small></div>
+  </section>
+
+  <section class="side">
+    <div class="video"><div id="yt"></div></div>
+
+    <div class="transport">
+      <button id="play" class="play" aria-label="Play">▶</button>
+      <input id="time" type="range" min="0" max="300" step="0.1" value="26" aria-label="Time in the song">
+      <span id="tlabel" class="mono">0:26</span>
+    </div>
+
+    <div class="modes">
+      <div class="seg" role="group" aria-label="Heat mode">
+        <button data-mode="acc" class="on">Whole song so far</button>
+        <button data-mode="trail">Last 12 s</button>
+        <button data-mode="all">Full map</button>
+      </div>
+      <label class="tog"><input id="unc" type="checkbox" checked> show uncertain moments</label>
+    </div>
+
+    <ul id="people"></ul>
+
+    <details class="sync">
+      <summary>Sync and method</summary>
+      <label class="off">Video offset <input id="offset" type="range" min="-6" max="6" step="0.25" value="0">
+        <span id="offv" class="mono">0.0 s</span></label>
+      <p>Positions were read by hand from the concert video every 2 seconds (<b id="nObs"></b> direct observations, the rest
+        interpolated between them) and placed on an approximate plan of the stage: platform 2.5 m, main stage 8 m,
+        runway 7.5 × 8 m, front block 18 × 8 m. Screen positions are not surveyed stage coordinates, so every point is an
+        estimate.</p>
+      <p>Heat: each sample counts for 2 seconds and fades to nothing about 1.8 m from the performer. Weights:
+        clear 1.0, approximate 0.6, silhouette 0.4. "Not visible" moments (camera cuts, people out of frame) stay out of the
+        heat map; they are drawn as hollow, dashed rings.</p>
+      <p>Video: Manifest's official live performance on YouTube, embedded through the YouTube player. All rights stay with the
+        artists and rights holders. Stage plan and positions: Barış Parlatangiller. Built with Claude.</p>
+    </details>
+  </section>
+</main>
+
+<footer>
+  <span>Barış Parlatangiller · #30DayMapChallenge 2026 · Day 25</span>
+  <a href="https://github.com/barisparlatangiller/30DMC26-D25-IsThisAMap-London-Manifest-Stage" target="_blank" rel="noopener">code &amp; method</a>
+</footer>
+
+<script src="app.js?v=1"></script>
+</body>
+</html>

@@ -1,0 +1,48 @@
+name: Build stage data and deploy
+
+# Stage plan + 2 s positions (data/) → stage.json → GitHub Pages.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt && mkdir -p logs
+
+      - name: Stage plan and positions → stage.json
+        run: |
+          python pipeline/prepare.py 2>&1 | tee logs/01_stage.log
+          test ${PIPESTATUS[0]} -eq 0
+          echo "::notice title=stage::$(head -c 900 logs/01_stage.log | tr '\n' ' ')"
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
