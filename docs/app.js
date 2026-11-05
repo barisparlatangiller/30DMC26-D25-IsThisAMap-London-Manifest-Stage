@@ -58,7 +58,7 @@ function buildHeat() {
       if (!S.unc && w < 1) w = w >= 0.6 ? w : 0;
       if (w <= 0) continue;
       if (S.mode === "trail") { const age = t - ts; if (age > TRAIL) continue; w *= Math.exp(-age / (TRAIL / 2.2)); }
-      const k = S.mode === "trail" ? 0.55 : 0.2;
+      const k = S.mode === "trail" ? 0.5 : 0.11;
       const gr = g.createRadialGradient(X(x), Y(y), 0, X(x), Y(y), r);
       gr.addColorStop(0, `rgba(255,255,255,${(k * w).toFixed(3)})`);
       gr.addColorStop(0.45, `rgba(255,255,255,${(k * w * 0.45).toFixed(3)})`);
@@ -101,7 +101,7 @@ function drawStage() {
 function draw() {
   drawStage();
   buildHeat();
-  ctx.save(); ctx.globalCompositeOperation = "screen";
+  ctx.save(); ctx.globalCompositeOperation = "screen"; ctx.globalAlpha = 0.82;
   for (const m of S.d.members) if (S.on.has(m.key)) ctx.drawImage(S.heat[m.key], 0, 0);
   ctx.restore();
   if (S.mode === "all") return;
@@ -116,6 +116,7 @@ function draw() {
     }
     ctx.strokeStyle = m.color; ctx.globalAlpha = 0.55; ctx.lineWidth = 1.6 * DPR; ctx.lineCap = "round"; ctx.stroke(); ctx.globalAlpha = 1;
   }
+  const placed = [];
   for (const m of S.d.members) {
     if (!S.on.has(m.key)) continue;
     const p = pos(m, S.t); if (!p) continue;
@@ -135,7 +136,10 @@ function draw() {
     }
     ctx.font = `600 ${11 * DPR}px "Space Grotesk"`; ctx.textAlign = "left";
     ctx.fillStyle = hidden ? "rgba(239,234,247,.45)" : "rgba(239,234,247,.92)";
-    ctx.fillText(m.name.split(" ")[0], x + r + 4 * DPR, y - r * 0.4);
+    let ly = y - r * 0.4; const lx = x + r + 4 * DPR, lh = 12 * DPR;
+    while (placed.some(([a, b]) => Math.abs(a - lx) < 46 * DPR && Math.abs(b - ly) < lh)) ly += lh;
+    placed.push([lx, ly]);
+    ctx.fillText(m.name.split(" ")[0], lx, ly);
   }
 }
 
