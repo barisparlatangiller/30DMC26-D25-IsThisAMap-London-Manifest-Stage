@@ -101,7 +101,7 @@ function drawStage() {
 function draw() {
   drawStage();
   buildHeat();
-  ctx.save(); ctx.globalCompositeOperation = "screen"; ctx.globalAlpha = 0.82;
+  ctx.save(); ctx.globalCompositeOperation = "screen"; ctx.globalAlpha = 0.78;
   for (const m of S.d.members) if (S.on.has(m.key)) ctx.drawImage(S.heat[m.key], 0, 0);
   ctx.restore();
   if (S.mode === "all") return;
