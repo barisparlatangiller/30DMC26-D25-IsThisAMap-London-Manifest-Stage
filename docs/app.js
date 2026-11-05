@@ -171,23 +171,26 @@ function draw() {
   const live = S.d.members.filter(m => S.on.has(m.key)).map(m => ({ m, p: pos(m, S.dt) })).filter(o => o.p && (S.unc || o.p.state !== "g"));
   // name discs: soft-edged, name inside. Where performers stand closer than a disc, the discs are nudged apart just
   // enough to stay readable; a small dot keeps the true position.
-  ctx.font = `700 ${11 * DPR}px "Inter Tight"`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-  const RDISC = Math.max(...S.d.members.map(m => ctx.measureText(m.name.split(" ")[0]).width)) / 2 + 9 * DPR;
+  ctx.font = `700 ${9.5 * DPR}px "Inter Tight"`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  const RDISC = Math.max(...S.d.members.map(m => ctx.measureText(m.name.split(" ")[0]).width)) / 2 + 4.5 * DPR;
   const D = live.map(({ m, p }) => {
     const name = m.name.split(" ")[0], r = RDISC;
     return { m, p, name, r, x0: X(p.x), y0: Y(p.y), x: X(p.x), y: Y(p.y) };
   });
-  for (let it = 0; it < 40; it++) {
+  // side by side stays side by side: overlapping discs are only spread sideways (along the line), never front/back
+  for (let it = 0; it < 30; it++) {
     let moved = false;
     for (let i = 0; i < D.length; i++) for (let j = i + 1; j < D.length; j++) {
-      const a = D[i], b = D[j]; let dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy); const need = (a.r + b.r) * 1.02;
-      if (d < need) { if (d < 1e-3) { dx = 1; dy = 0; d = 1; } const push = (need - d) / 2; a.x -= dx / d * push; a.y -= dy / d * push; b.x += dx / d * push; b.y += dy / d * push; moved = true; }
+      const a = D[i], b = D[j], dx = b.x - a.x, dy = b.y - a.y, need = (a.r + b.r) * 0.92;
+      if (Math.abs(dy) < need * 0.8 && Math.abs(dx) < need) {
+        const dir = Math.abs(dx) > 1e-3 ? Math.sign(dx) : Math.sign(b.x0 - a.x0) || 1, push = (need - Math.abs(dx)) / 2;
+        a.x -= dir * push; b.x += dir * push; moved = true;
+      }
     }
-    for (const a of D) { a.x += (a.x0 - a.x) * 0.06; a.y += (a.y0 - a.y) * 0.06; }   // gentle pull back to the true spot
     if (!moved) break;
   }
   // keep the display positions smooth from frame to frame
-  for (const a of D) { const prev = DISP[a.m.key]; if (prev && Math.hypot(prev[0] - a.x, prev[1] - a.y) < 40 * DPR) { a.x = prev[0] + (a.x - prev[0]) * 0.35; a.y = prev[1] + (a.y - prev[1]) * 0.35; } DISP[a.m.key] = [a.x, a.y]; }
+  for (const a of D) { const prev = DISP[a.m.key]; if (prev && Math.hypot(prev[0] - a.x, prev[1] - a.y) < 40 * DPR) { a.x = prev[0] + (a.x - prev[0]) * 0.35; } DISP[a.m.key] = [a.x, a.y]; }
   for (const a of D) {
     const hidden = a.p.state === "g";
     const g = ctx.createRadialGradient(a.x, a.y, 0, a.x, a.y, a.r * 1.25);
