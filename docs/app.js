@@ -2,7 +2,7 @@
 const ZN = { platform: "Platform", merdiven: "Stairs", ana_sahne_on: "Main stage", runway: "Runway", on_blok: "Front block" };
 const ZORDER = ["platform", "merdiven", "ana_sahne_on", "runway", "on_blok"];
 const PART = { platform: "PLATFORM  +3.3 m", merdiven: "STAIRS", ana_sahne: "MAIN STAGE", runway: "RUNWAY", on_blok: "FRONT BLOCK" };
-const CELL = 0.1, R = 2.6, TRAIL = 12;
+const CELL = 0.1, R = 2.6, TRAIL = 12, TAU = 18, FLOOR = 0.45;
 const $ = s => document.querySelector(s);
 const fmt = t => `${Math.floor(t / 60)}:${String(Math.floor(Math.max(0, t) % 60)).padStart(2, "0")}`;
 const hex = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
@@ -36,7 +36,8 @@ function initGrids() {
     const q = (i * i + j * j) / (KR * KR);
     KER[(j + KR) * (2 * KR + 1) + (i + KR)] = q < 1 ? (1 - q) ** 2 : 0;
   }
-  for (const m of S.d.members) { S.grids[m.key] = new Float32Array(GW * GH); S.applied[m.key] = 0; }
+  S.recent = {};
+  for (const m of S.d.members) { S.grids[m.key] = new Float32Array(GW * GH); S.recent[m.key] = new Float32Array(GW * GH); S.applied[m.key] = 0; }
 }
 function stamp(g, x, y, w) {
   const ci = Math.round(x / CELL), cj = Math.round(y / CELL), kw = 2 * KR + 1;
@@ -68,18 +69,25 @@ function updateGrids() {
     S.applied[m.key] = n;
   }
   S.accKey = key;
+  // recent footprints are brighter and settle to a lasting floor (FLOOR) over ~TAU seconds
+  for (const m of S.d.members) {
+    const g = S.recent[m.key]; g.fill(0);
+    if (S.mode === "all") continue;
+    for (const s of m.s) { const age = t - s[0]; if (age < 0) break; if (age > 4 * TAU) continue; const w = wOf(s); if (w) stamp(g, s[1], s[2], w * Math.exp(-age / TAU)); }
+  }
 }
 
 // colour: the performer with more presence leads (weights ^3), so overlaps keep a hue instead of turning white
 function paintHeat() {
   const ms = S.d.members.filter(m => S.on.has(m.key));
-  const cols = ms.map(m => hex(m.color)), gs = ms.map(m => S.grids[m.key]);
-  const K = S.mode === "trail" ? 1.1 : 5.5;
+  const cols = ms.map(m => hex(m.color)), gs = ms.map(m => S.grids[m.key]), rs = ms.map(m => S.recent[m.key]);
+  const fl = S.mode === "acc" ? FLOOR : 1, rc = S.mode === "acc" ? 1 - FLOOR : 0;
+  const K = S.mode === "trail" ? 1.1 : S.mode === "acc" ? 3.2 : 5.5;
   const px = IMG.data;
   for (let p = 0, q = 0; p < GW * GH; p++, q += 4) {
     let T = 0, sw = 0, r = 0, g = 0, b = 0;
     for (let i = 0; i < gs.length; i++) {
-      const v = gs[i][p]; if (v <= 0) continue;
+      const v = fl * gs[i][p] + rc * rs[i][p]; if (v <= 0) continue;
       T += v; const w = v * v * v; sw += w; r += cols[i][0] * w; g += cols[i][1] * w; b += cols[i][2] * w;
     }
     if (T < 1e-3) { px[q + 3] = 0; continue; }
@@ -140,24 +148,9 @@ function draw() {
   ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = "high";
   ctx.drawImage(heatCv, X(0), Y(0), S.d.w * SC, S.d.h * SC);
   drawOutlines();
-  // choreography texture: every path walked so far, thin, in her colour
-  const tEnd = S.mode === "all" ? S.d.t1 : S.t;
-  ctx.lineWidth = 1.3 * DPR; ctx.lineCap = "round"; ctx.lineJoin = "round";
-  for (const m of S.d.members) {
-    if (!S.on.has(m.key)) continue;
-    const pts = PATH[m.key]; ctx.beginPath(); let n = 0;
-    for (const [t, x, y] of pts) { if (t > tEnd) break; n++ ? ctx.lineTo(X(x), Y(y)) : ctx.moveTo(X(x), Y(y)); }
-    ctx.strokeStyle = m.color; ctx.globalAlpha = S.mode === "trail" ? 0.18 : 0.5; ctx.stroke(); ctx.globalAlpha = 1;
-  }
   if (S.mode === "all") return;
 
   const live = S.d.members.filter(m => S.on.has(m.key)).map(m => ({ m, p: pos(m, S.t) })).filter(o => o.p && (S.unc || o.p.state !== "g"));
-  // short motion trail
-  for (const { m } of live) {
-    ctx.beginPath(); let first = true;
-    for (let tt = Math.max(S.d.t0, S.t - 4); tt <= S.t; tt += 0.2) { const p = pos(m, tt); if (!p) continue; first ? ctx.moveTo(X(p.x), Y(p.y)) : ctx.lineTo(X(p.x), Y(p.y)); first = false; }
-    ctx.strokeStyle = m.color; ctx.globalAlpha = 0.7; ctx.lineWidth = 2.2 * DPR; ctx.lineCap = "round"; ctx.stroke(); ctx.globalAlpha = 1;
-  }
   // dots: solid colour, black outline, own-colour halo — no white
   const rad = p => (9 + (p.z - 1.8) * 1.4) * DPR;
   for (const { m, p } of live) {               // halos first, so no halo ever covers another performer's dot
@@ -264,12 +257,18 @@ window.onYouTubeIframeAPIReady = () => {
     },
   });
 };
-function setT(t, seek) { S.t = Math.max(0, Math.min(310, t)); S.dirty = true; if (seek && S.ytReady) S.yt.seekTo(Math.max(0, S.t - S.off), true); }
+function setT(t, seek) { S.t = Math.max(0, Math.min(310, t)); S.dirty = true; S.anchor = null; if (seek && S.ytReady) S.yt.seekTo(Math.max(0, S.t - S.off), true); }
 
 function loop(now) {
   const dt = (now - S.last) / 1000; S.last = now;
-  if (S.ytReady && S.yt.getPlayerState && S.yt.getPlayerState() === 1) { S.t = S.yt.getCurrentTime() + S.off; S.dirty = true; }
-  else if (!S.ytReady && S.playing) { S.t += dt; if (S.t > S.d.t1 + 4) S.playing = false; S.dirty = true; }
+  if (S.ytReady && S.yt.getPlayerState && S.yt.getPlayerState() === 1) {
+    // the player reports its time in coarse steps; run our own clock between reports and re-anchor on each new value
+    const vt = S.yt.getCurrentTime(), rate = S.yt.getPlaybackRate ? S.yt.getPlaybackRate() : 1;
+    if (vt !== S.rawVt || !S.anchor) { const pred = S.anchor ? S.anchor.vt + (now - S.anchor.pf) / 1000 * rate : vt;
+      if (!S.anchor || Math.abs(pred - vt) > 0.12) S.anchor = { vt, pf: now }; S.rawVt = vt; }
+    S.t = S.anchor.vt + (now - S.anchor.pf) / 1000 * rate + S.off; S.dirty = true;
+  } else if (!S.ytReady && S.playing) { S.t += dt; if (S.t > S.d.t1 + 4) S.playing = false; S.dirty = true; }
+  else S.anchor = null;
   if (S.dirty) {
     draw(); nowZones(); nowMoment(); S.dirty = false;
     $("#time").value = S.t; $("#tlabel").textContent = fmt(S.t); $("#clock").textContent = fmt(S.t);
@@ -281,7 +280,6 @@ async function init() {
   S.d = await fetch("data/stage.json?v=5").then(r => r.json());
   S.on = new Set(S.d.members.map(m => m.key));
   $("#nObs").textContent = S.d.kinds.gozlem;
-  for (const m of S.d.members) { PATH[m.key] = []; for (let t = S.d.t0; t <= S.d.t1; t += 0.4) { const p = pos(m, t); if (p) PATH[m.key].push([t, p.x, p.y]); } }
   initGrids(); resize(); people(); moments();
   new ResizeObserver(resize).observe(cv);
   const tag = document.createElement("script"); tag.src = "https://www.youtube.com/iframe_api"; document.head.appendChild(tag);
@@ -294,12 +292,16 @@ async function init() {
     document.querySelectorAll(".seg button").forEach(x => x.classList.toggle("on", x === b)); S.mode = b.dataset.mode; S.dirty = true;
   });
   $("#unc").onchange = e => { S.unc = e.target.checked; S.dirty = true; };
-  $("#offset").oninput = e => { S.off = +e.target.value; $("#offv").textContent = `${S.off > 0 ? "+" : ""}${S.off.toFixed(2)} s`; S.dirty = true; };
+  const setOff = v => { S.off = Math.max(-6, Math.min(6, v)); $("#offset").value = S.off; const txt = `${S.off > 0 ? "+" : ""}${S.off.toFixed(1)} s`; $("#offv").textContent = txt; $("#offv2").textContent = txt; S.dirty = true; };
+  $("#nudgeM").onclick = () => setOff(S.off - 0.5); $("#nudgeP").onclick = () => setOff(S.off + 0.5);
+  $("#offset").oninput = e => { S.off = +e.target.value; setOff(+e.target.value); };
   document.addEventListener("keydown", e => {
     if (e.target.tagName === "INPUT") return;
     if (e.code === "Space") { e.preventDefault(); $("#play").click(); }
     if (e.key === "ArrowRight") setT(S.t + 2, true);
     if (e.key === "ArrowLeft") setT(S.t - 2, true);
+    if (e.key === ",") $("#nudgeM").click();
+    if (e.key === ".") $("#nudgeP").click();
   });
   document.fonts?.ready.then(() => (S.dirty = true));
   requestAnimationFrame(loop);

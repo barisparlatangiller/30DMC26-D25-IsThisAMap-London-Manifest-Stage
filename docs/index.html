@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link href="style.css?v=6" rel="stylesheet">
+<link href="style.css?v=7" rel="stylesheet">
 </head>
 <body>
 <div class="app">
@@ -40,8 +40,10 @@
       <span id="tlabel" class="mono">0:26</span>
     </div>
 
+    <div class="nudge"><span>Map vs. video</span><button id="nudgeM" title="Map earlier (,)">−0.5 s</button><b id="offv2" class="mono">0.0 s</b><button id="nudgeP" title="Map later (.)">+0.5 s</button></div>
+
     <div class="seg" role="group" aria-label="What the colours show">
-      <button data-mode="acc" class="on">Song so far</button>
+      <button data-mode="acc" class="on">Footprints</button>
       <button data-mode="trail">Last 12 s</button>
       <button data-mode="all">Whole song</button>
     </div>
@@ -59,7 +61,7 @@
         observations, the rest interpolated) and placed on an approximate stage plan: a 2.5 m platform at +3.3 m with stairs,
         an 8 m main stage, a 7.5 m runway and an 18 m front block. Screen positions are not surveyed coordinates, so
         every point is an estimate.</p>
-      <p>Colour: each sample counts for 2 seconds of presence, strongest where she stands and gone 2.6 m away. Thin lines trace the path she has walked. Where
+      <p>Colour: each sample counts for 2 seconds of presence, strongest where she stands and gone 2.6 m away. Footprints stay on the stage: the newest are brightest and settle to a lasting trace within about half a minute. Where
         several performers share the floor, the colour of whoever spent more time there leads, so the colours don't wash
         out to white. Clear sightings count fully, approximate ones 0.6 and silhouettes 0.4. Moments when she is out of
         frame are left out and shown as a dashed ring.</p>
@@ -71,6 +73,6 @@
     </details>
   </aside>
 </div>
-<script src="app.js?v=7"></script>
+<script src="app.js?v=8"></script>
 </body>
 </html>
