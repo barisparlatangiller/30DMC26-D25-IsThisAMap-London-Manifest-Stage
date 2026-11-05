@@ -11,7 +11,7 @@ const S = { d: null, t: 26, mode: "acc", unc: true, off: 0, on: new Set(), playi
   last: performance.now(), dirty: true, grids: {}, applied: {}, accKey: "" };
 const cv = $("#stage"), ctx = cv.getContext("2d");
 const heatCv = document.createElement("canvas"), hctx = heatCv.getContext("2d");
-const PATH = {};
+const PATH = {}, DISP = {};
 let DPR = 1, SC = 1, OX = 0, OY = 0, GW = 0, GH = 0, KER = null, KR = 0, IMG = null;
 
 // ---------- geometry
@@ -148,56 +148,47 @@ function draw() {
   ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = "high";
   ctx.drawImage(heatCv, X(0), Y(0), S.d.w * SC, S.d.h * SC);
   drawOutlines();
+  // soft paths: the road she has walked so far, as a blurred band about 1 m wide
+  const tEnd = S.mode === "all" ? S.d.t1 : S.t;
+  ctx.save(); ctx.filter = `blur(${Math.round(3 * DPR)}px)`; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.lineWidth = 0.9 * SC;
+  for (const m of S.d.members) {
+    if (!S.on.has(m.key)) continue;
+    ctx.beginPath(); let n = 0;
+    for (const [t, x, y] of PATH[m.key]) { if (t > tEnd) break; n++ ? ctx.lineTo(X(x), Y(y)) : ctx.moveTo(X(x), Y(y)); }
+    ctx.strokeStyle = m.color; ctx.globalAlpha = S.mode === "trail" ? 0.08 : 0.2; ctx.stroke();
+  }
+  ctx.restore();
   if (S.mode === "all") return;
 
   const live = S.d.members.filter(m => S.on.has(m.key)).map(m => ({ m, p: pos(m, S.t) })).filter(o => o.p && (S.unc || o.p.state !== "g"));
-  // dots: solid colour, black outline, own-colour halo — no white
-  const rad = p => (9 + (p.z - 1.8) * 1.4) * DPR;
-  for (const { m, p } of live) {               // halos first, so no halo ever covers another performer's dot
-    if (p.state === "g") continue;
-    const x = X(p.x), y = Y(p.y), r = rad(p), g = ctx.createRadialGradient(x, y, r, x, y, r * 2.4);
-    g.addColorStop(0, m.color); g.addColorStop(1, "rgba(0,0,0,0)");
-    ctx.globalAlpha = p.state === "n" ? 0.5 : 0.3; ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r * 2.4, 0, 7); ctx.fill(); ctx.globalAlpha = 1;
+  // name discs: soft-edged, name inside. Where performers stand closer than a disc, the discs are nudged apart just
+  // enough to stay readable; a small dot keeps the true position.
+  ctx.font = `700 ${11 * DPR}px "Inter Tight"`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  const D = live.map(({ m, p }) => {
+    const name = m.name.split(" ")[0], r = Math.max(17 * DPR, ctx.measureText(name).width / 2 + 7 * DPR) + (p.z - 1.8) * 1.2 * DPR;
+    return { m, p, name, r, x0: X(p.x), y0: Y(p.y), x: X(p.x), y: Y(p.y) };
+  });
+  for (let it = 0; it < 40; it++) {
+    let moved = false;
+    for (let i = 0; i < D.length; i++) for (let j = i + 1; j < D.length; j++) {
+      const a = D[i], b = D[j]; let dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy); const need = (a.r + b.r) * 0.9;
+      if (d < need) { if (d < 1e-3) { dx = 1; dy = 0; d = 1; } const push = (need - d) / 2; a.x -= dx / d * push; a.y -= dy / d * push; b.x += dx / d * push; b.y += dy / d * push; moved = true; }
+    }
+    for (const a of D) { a.x += (a.x0 - a.x) * 0.06; a.y += (a.y0 - a.y) * 0.06; }   // gentle pull back to the true spot
+    if (!moved) break;
   }
-  for (const { m, p } of live) {
-    const x = X(p.x), y = Y(p.y), r = rad(p);
-    if (p.state === "g") {
-      ctx.setLineDash([3 * DPR, 3 * DPR]); ctx.strokeStyle = m.color; ctx.lineWidth = 2 * DPR; ctx.globalAlpha = 0.75;
-      ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1; continue;
+  // keep the display positions smooth from frame to frame
+  for (const a of D) { const prev = DISP[a.m.key]; if (prev && Math.hypot(prev[0] - a.x, prev[1] - a.y) < 40 * DPR) { a.x = prev[0] + (a.x - prev[0]) * 0.35; a.y = prev[1] + (a.y - prev[1]) * 0.35; } DISP[a.m.key] = [a.x, a.y]; }
+  for (const a of D) {
+    const hidden = a.p.state === "g";
+    const g = ctx.createRadialGradient(a.x, a.y, 0, a.x, a.y, a.r * 1.25);
+    const al = hidden ? 0.28 : a.p.state === "n" ? 1 : 0.8;
+    g.addColorStop(0, a.m.color); g.addColorStop(0.7, a.m.color); g.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.globalAlpha = al; ctx.fillStyle = g; ctx.beginPath(); ctx.arc(a.x, a.y, a.r * 1.25, 0, 7); ctx.fill(); ctx.globalAlpha = 1;
+    if (Math.hypot(a.x - a.x0, a.y - a.y0) > a.r * 0.6) {           // true position
+      ctx.fillStyle = a.m.color; ctx.beginPath(); ctx.arc(a.x0, a.y0, 2.6 * DPR, 0, 7); ctx.fill();
     }
-    ctx.fillStyle = m.color; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill();
-    ctx.strokeStyle = "#000"; ctx.lineWidth = 1.5 * DPR; ctx.stroke();
-  }
-  // name pills, placed so they never overlap each other or a dot; leader line when moved away
-  ctx.font = `700 ${12.5 * DPR}px "Inter Tight"`; ctx.textAlign = "left"; ctx.textBaseline = "middle";
-  const boxes = live.map(({ p }) => { const r = rad(p) + 2 * DPR; return [X(p.x) - r, Y(p.y) - r, 2 * r, 2 * r]; });
-  const hit = (a, b) => a[0] < b[0] + b[2] && b[0] < a[0] + a[2] && a[1] < b[1] + b[3] && b[1] < a[1] + a[3];
-  const order = live.slice().sort((a, b) => a.p.y - b.p.y || a.p.x - b.p.x);
-  for (const { m, p } of order) {
-    const name = m.name.split(" ")[0], tw = ctx.measureText(name).width, w = tw + 14 * DPR, h = 21 * DPR;
-    const x = X(p.x), y = Y(p.y), r = rad(p);
-    let best = null;
-    for (const d of [0, 1, 2, 3, 4, 5]) {
-      const dd = r + 6 * DPR + d * 15 * DPR;
-      for (const [ax, ay] of [[1, 0], [-1, 0], [0, -1], [0, 1], [1, -1], [-1, -1], [1, 1], [-1, 1]]) {
-        const bx = ax > 0 ? x + dd : ax < 0 ? x - dd - w : x - w / 2;
-        const by = ay > 0 ? y + dd : ay < 0 ? y - dd - h : y - h / 2;
-        const b = [bx, by, w, h];
-        if (bx < 2 || by < 2 || bx + w > cv.width - 2 || by + h > cv.height - 2) continue;
-        if (!boxes.some(o => hit(o, b))) { best = b; break; }
-      }
-      if (best) break;
-    }
-    if (!best) best = [x + r + 6 * DPR, y - h / 2, w, h];
-    boxes.push(best);
-    const cx = best[0] + best[2] / 2, cy = best[1] + best[3] / 2;
-    if (Math.hypot(cx - x, cy - y) > r + 30 * DPR) {
-      ctx.strokeStyle = m.color; ctx.globalAlpha = 0.8; ctx.lineWidth = 1.2 * DPR;
-      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(Math.max(best[0], Math.min(x, best[0] + best[2])), Math.max(best[1], Math.min(y, best[1] + best[3]))); ctx.stroke(); ctx.globalAlpha = 1;
-    }
-    rrect(best[0], best[1], best[2], best[3], h / 2); ctx.fillStyle = p.state === "g" ? "#1a1a1a" : m.color; ctx.fill();
-    if (p.state === "g") { ctx.strokeStyle = m.color; ctx.lineWidth = 1.2 * DPR; ctx.stroke(); }
-    ctx.fillStyle = p.state === "g" ? m.color : "#0b0b0b"; ctx.fillText(name, best[0] + 7 * DPR, best[1] + h / 2 + 0.5 * DPR);
+    ctx.fillStyle = hidden ? a.m.color : "#111"; ctx.fillText(a.name, a.x, a.y + 0.5 * DPR);
   }
   ctx.textBaseline = "alphabetic";
 }
@@ -280,6 +271,7 @@ async function init() {
   S.d = await fetch("data/stage.json?v=5").then(r => r.json());
   S.on = new Set(S.d.members.map(m => m.key));
   $("#nObs").textContent = S.d.kinds.gozlem;
+  for (const m of S.d.members) { PATH[m.key] = []; for (let t = S.d.t0; t <= S.d.t1 + 0.01; t += 0.4) { const p = pos(m, t); if (p) PATH[m.key].push([t, p.x, p.y]); } }
   initGrids(); resize(); people(); moments();
   new ResizeObserver(resize).observe(cv);
   const tag = document.createElement("script"); tag.src = "https://www.youtube.com/iframe_api"; document.head.appendChild(tag);
