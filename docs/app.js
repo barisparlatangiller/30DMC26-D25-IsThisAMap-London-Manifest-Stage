@@ -160,13 +160,18 @@ function draw() {
   }
   // dots: solid colour, black outline, own-colour halo — no white
   const rad = p => (9 + (p.z - 1.8) * 1.4) * DPR;
+  for (const { m, p } of live) {               // halos first, so no halo ever covers another performer's dot
+    if (p.state === "g") continue;
+    const x = X(p.x), y = Y(p.y), r = rad(p), g = ctx.createRadialGradient(x, y, r, x, y, r * 2.4);
+    g.addColorStop(0, m.color); g.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.globalAlpha = p.state === "n" ? 0.5 : 0.3; ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r * 2.4, 0, 7); ctx.fill(); ctx.globalAlpha = 1;
+  }
   for (const { m, p } of live) {
     const x = X(p.x), y = Y(p.y), r = rad(p);
     if (p.state === "g") {
       ctx.setLineDash([3 * DPR, 3 * DPR]); ctx.strokeStyle = m.color; ctx.lineWidth = 2 * DPR; ctx.globalAlpha = 0.75;
       ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1; continue;
     }
-    ctx.globalAlpha = p.state === "n" ? 0.35 : 0.2; ctx.fillStyle = m.color; ctx.beginPath(); ctx.arc(x, y, r * 2.1, 0, 7); ctx.fill(); ctx.globalAlpha = 1;
     ctx.fillStyle = m.color; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill();
     ctx.strokeStyle = "#000"; ctx.lineWidth = 1.5 * DPR; ctx.stroke();
   }
