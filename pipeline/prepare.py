@@ -18,12 +18,12 @@ import shapely
 
 D, OUT = Path("data"), Path("docs/data")
 WHO = {  # dress colour in the source data → member, pastel colour
-    "Siyah":   ("Hilal",        "#c4afff"),
-    "Kizil":   ("Mina",         "#ff8c8c"),
-    "Kumral":  ("Esin",         "#ffd66b"),
-    "Mavi":    ("Zeynep Oktay", "#7cc3ff"),
-    "Dalgali": ("Sueda",        "#86e3a2"),
-    "Platin":  ("Lidya",        "#ffb0dc"),
+    "Siyah":   ("Hilal",        "#c9b8f5"),
+    "Kizil":   ("Mina",         "#f4a3a0"),
+    "Kumral":  ("Esin",         "#f3dd8e"),
+    "Mavi":    ("Zeynep Oktay", "#a9cdf2"),
+    "Dalgali": ("Sueda",        "#a8ddbe"),
+    "Platin":  ("Lidya",        "#f3b8d6"),
 }
 WEIGHT = {"net": 1.0, "yaklasik": 0.6, "siluet": 0.4, "gorunmuyor": 0.0}
 
@@ -79,10 +79,19 @@ for p in parts:
     print(p["id"], p["poly"][:3])
 
 
+WARP = [[26, 29], [56, 60], [72, 76], [222, 263], [226, 268], [290, 296]]   # data clock → video clock, see below
+
+
+def vw(t):
+    a = np.array(WARP, dtype=float)
+    return float(np.interp(t, a[:, 0], a[:, 1], left=t + a[0, 1] - a[0, 0], right=t + a[-1, 1] - a[-1, 0]))
+
+
 # ---------- moments: facts computed from the positions, each one a jump point in the video
 def moments(d):
     M = d["members"]; T = [s[0] for s in M[0]["s"]]
-    fm = lambda t: f"{t // 60}:{t % 60:02d}"
+    fm = lambda t: (lambda v: f"{v // 60}:{v % 60:02d}")(int(round(vw(t))))
+    dur = lambda a, b: int(round(vw(b) - vw(a)))
     P = np.array([[[s[1], s[2]] for s in m["s"]] for m in M]); V = np.array([[s[5] != "g" for s in m["s"]] for m in M])
     Z = [[s[6] for s in m["s"]] for m in M]; first = lambda m: m["name"].split(" ")[0]
     out = []
@@ -96,30 +105,77 @@ def moments(d):
     out.append({"t": t1, "title": "Down the stairs",
                 "text": f"{first(m1)} is the first to step down, at {fm(t1)}. By {fm(tl)} the platform is empty."})
     run = [t for t, z in zip(T, Z[0]) if z == "runway"]
-    span = (run[0] if run else T[-1]) - tl
+    span = dur(tl, run[0] if run else T[-1])
     out.append({"t": tl + 10, "title": "The main stage",
-                "text": f"For {span // 60} min {span % 60:02d} s, from {fm(tl)} to {fm(tl + span)}, the main stage is the whole world. The bright band at its front edge is where all six spend most of the song."})
-    sp = np.linalg.norm(np.diff(P, axis=1), axis=2) / 2
+                "text": f"For {span // 60} min {span % 60:02d} s, from {fm(tl)} to {fm(run[0] if run else T[-1])}, the main stage is the whole world. The bright band at its front edge is where all six spend most of the song."})
+    dts = np.array([vw(b_) - vw(a_) for a_, b_ in zip(T, T[1:])])
+    sp = np.linalg.norm(np.diff(P, axis=1), axis=2) / dts
     a, b = np.unravel_index(int(sp.argmax()), sp.shape)
     out.append({"t": run[0] if run else T[b], "title": "The run",
-                "text": f"At {fm(run[0] if run else T[b])} they cross the {7.5:.1f} m runway together in a few seconds; {first(M[a])} is fastest at {sp[a, b]:.1f} m/s."})
+                "text": f"At {fm(run[0] if run else T[b])} all six cross the 7.5 m runway together, in about {dur(run[0], run[-1] + 4)} seconds."})
     all6 = [t for k, t in enumerate(T) if all(Z[i][k] == "on_blok" for i in range(len(M)))]
     if all6:
         out.append({"t": all6[0], "title": "In front of the crowd",
-                    "text": f"From {fm(all6[0])} all six hold the front block, closest to the audience, until the end ({all6[-1] - all6[0] + 2} s)."})
+                    "text": f"From {fm(all6[0])} all six hold the front block, closest to the audience, until the end ({dur(all6[0], all6[-1]) + 2} s)."})
     k1 = int(np.nanargmax(spread))
     out.append({"t": T[k1], "title": "Widest formation",
                 "text": f"At {fm(T[k1])} the line is at its widest: on average {spread[k1]:.1f} m from the centre, {spread[k1] / spread[k0]:.0f} times wider than at the opening."})
     walk = sorted(((m["path_m"], first(m)) for m in M), reverse=True)
     hid = sorted(((int((~V[i]).sum() * 2), first(m)) for i, m in enumerate(M)), reverse=True)
     out.append({"t": None, "title": "Who covers the most ground",
-                "text": f"{walk[0][1]} walks {walk[0][0]:.0f} m, {walk[-1][1]} {walk[-1][0]:.0f} m. Over the whole song each moves at about a quarter of a metre per second."})
+                "text": f"{walk[0][1]} walks {walk[0][0]:.0f} m, {walk[-1][1]} {walk[-1][0]:.0f} m."})
     out.append({"t": None, "title": "Hard to follow",
                 "text": f"The camera loses {hid[0][1]} for {hid[0][0]} s, {hid[-1][1]} for only {hid[-1][0]} s. Those moments stay out of the colour map."})
+    for o in out:
+        if o["t"] is not None:
+            o["t"] = round(vw(o["t"]), 1)
     return out
 
 
+# data clock → video clock: the positions were read on a clock that drifts against the published video (about +3 s
+# at the start, +40 s by the move to the front block). WARP anchors were checked by eye against the video: silhouettes
+# appear, first steps down, all off the stairs, start of the run, arrival at the front block, end of the song.
+out["warp"] = WARP
+
+
+# ---------- who is where: relations computed from the visible samples
+def relations(d):
+    M = d["members"]; n = len(M); first = lambda m: m["name"].split(" ")[0]
+    P = np.array([[[s[1], s[2]] for s in m["s"]] for m in M]); V = np.array([[s[5] != "g" for s in m["s"]] for m in M])
+    allv = V.all(0)
+    front = np.zeros(n); centre = np.zeros(n); nb = np.zeros((n, n)); side = np.zeros(n); cnt = 0
+    for k in np.where(allv)[0]:
+        cnt += 1
+        front[np.argmax(P[:, k, 1])] += 1
+        centre[np.argmin(np.abs(P[:, k, 0] - d["w"] / 2))] += 1
+        D = np.linalg.norm(P[:, None, k] - P[None, :, k], axis=2); np.fill_diagonal(D, 1e9)
+        for i in range(n): nb[i, np.argmin(D[i])] += 1
+        order = np.argsort(P[:, k, 0]); side[order] += np.arange(n)
+    side /= max(cnt, 1)
+    for i, m in enumerate(M):
+        j = int(np.argmax(nb[i])); lr = side[i] / (n - 1)
+        m["rel"] = {"front_pct": round(100 * front[i] / cnt), "centre_pct": round(100 * centre[i] / cnt),
+                    "neighbour": first(M[j]), "neighbour_pct": round(100 * nb[i, j] / cnt),
+                    "side": "left" if lr < 0.4 else "right" if lr > 0.6 else "centre", "lr": round(float(lr), 2)}
+    f = max(M, key=lambda m: m["rel"]["front_pct"]); c = max(M, key=lambda m: m["rel"]["centre_pct"])
+    pairs = sorted({tuple(sorted((first(m), m["rel"]["neighbour"]))) for m in M if
+                    next(x for x in M if first(x) == m["rel"]["neighbour"])["rel"]["neighbour"] == first(m)})
+    lineup = " · ".join(first(m) for m in sorted(M, key=lambda m: m["rel"]["lr"]))
+    facts = [
+        {"t": None, "title": "The line-up", "text": f"Seen from the audience, left to right, the usual order is {lineup}. It hardly changes all song."},
+        {"t": None, "title": "Centre stage", "text": f"{first(c)} is the one closest to the centre line in {c['rel']['centre_pct']}% of the moments when all six are visible."},
+        {"t": None, "title": "Closest to the crowd", "text": f"{first(f)} is the one nearest the audience {f['rel']['front_pct']}% of the time."},
+    ]
+    if pairs:
+        facts.append({"t": None, "title": "Always side by side",
+                      "text": " and ".join(f"{a} & {b}" for a, b in pairs) + " are each other's nearest neighbour most of the song."})
+    return facts, cnt
+
+
 out["moments"] = moments(out)
+rel, ncnt = relations(out)
+out["moments"] += rel
+out["rel_samples"] = ncnt
 (OUT / "stage.json").write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":")))
 for m in out["moments"]:
     print(m["t"], m["title"], "—", m["text"])

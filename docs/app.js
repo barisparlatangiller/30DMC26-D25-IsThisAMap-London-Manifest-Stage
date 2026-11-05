@@ -2,17 +2,25 @@
 const ZN = { platform: "Platform", merdiven: "Stairs", ana_sahne_on: "Main stage", runway: "Runway", on_blok: "Front block" };
 const ZORDER = ["platform", "merdiven", "ana_sahne_on", "runway", "on_blok"];
 const PART = { platform: "PLATFORM  +3.3 m", merdiven: "STAIRS", ana_sahne: "MAIN STAGE", runway: "RUNWAY", on_blok: "FRONT BLOCK" };
-const CELL = 0.1, R = 2.6, TRAIL = 12, TAU = 18, FLOOR = 0.45;
+const CELL = 0.1, R = 3.2, TRAIL = 12, TAU = 18, FLOOR = 0.45;
 const $ = s => document.querySelector(s);
 const fmt = t => `${Math.floor(t / 60)}:${String(Math.floor(Math.max(0, t) % 60)).padStart(2, "0")}`;
 const hex = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
 
-const S = { d: null, t: 26, mode: "acc", unc: true, off: 0, on: new Set(), playing: false, yt: null, ytReady: false,
+const S = { d: null, t: 29, dt: 26, mode: "acc", unc: true, off: 0, on: new Set(), playing: false, yt: null, ytReady: false,
   last: performance.now(), dirty: true, grids: {}, applied: {}, accKey: "" };
 const cv = $("#stage"), ctx = cv.getContext("2d");
 const heatCv = document.createElement("canvas"), hctx = heatCv.getContext("2d");
 const PATH = {}, DISP = {};
 let DPR = 1, SC = 1, OX = 0, OY = 0, GW = 0, GH = 0, KER = null, KR = 0, IMG = null;
+
+// ---------- clocks: the video clock drives everything; positions were recorded on a clock that drifts against it
+function toData(v) {
+  const w = S.d.warp; if (!w) return v;
+  if (v <= w[0][1]) return v - (w[0][1] - w[0][0]);
+  for (let i = 1; i < w.length; i++) if (v <= w[i][1]) { const f = (v - w[i - 1][1]) / (w[i][1] - w[i - 1][1]); return w[i - 1][0] + f * (w[i][0] - w[i - 1][0]); }
+  return v - (w[w.length - 1][1] - w[w.length - 1][0]);
+}
 
 // ---------- geometry
 function resize() {
@@ -52,7 +60,7 @@ function stamp(g, x, y, w) {
 const wOf = s => { let w = s[4]; if (!S.unc && w < 1) w = 0; return w; };
 
 function updateGrids() {
-  const t = S.t, key = `${S.mode}|${S.unc}`;
+  const t = S.dt, key = `${S.mode}|${S.unc}`;
   if (S.mode === "trail") {
     for (const m of S.d.members) {
       const g = S.grids[m.key]; g.fill(0);
@@ -149,7 +157,7 @@ function draw() {
   ctx.drawImage(heatCv, X(0), Y(0), S.d.w * SC, S.d.h * SC);
   drawOutlines();
   // soft paths: the road she has walked so far, as a blurred band about 1 m wide
-  const tEnd = S.mode === "all" ? S.d.t1 : S.t;
+  const tEnd = S.mode === "all" ? S.d.t1 : S.dt;
   ctx.save(); ctx.filter = `blur(${Math.round(3 * DPR)}px)`; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.lineWidth = 0.9 * SC;
   for (const m of S.d.members) {
     if (!S.on.has(m.key)) continue;
@@ -160,12 +168,13 @@ function draw() {
   ctx.restore();
   if (S.mode === "all") return;
 
-  const live = S.d.members.filter(m => S.on.has(m.key)).map(m => ({ m, p: pos(m, S.t) })).filter(o => o.p && (S.unc || o.p.state !== "g"));
+  const live = S.d.members.filter(m => S.on.has(m.key)).map(m => ({ m, p: pos(m, S.dt) })).filter(o => o.p && (S.unc || o.p.state !== "g"));
   // name discs: soft-edged, name inside. Where performers stand closer than a disc, the discs are nudged apart just
   // enough to stay readable; a small dot keeps the true position.
   ctx.font = `700 ${11 * DPR}px "Inter Tight"`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  const RDISC = Math.max(...S.d.members.map(m => ctx.measureText(m.name.split(" ")[0]).width)) / 2 + 9 * DPR;
   const D = live.map(({ m, p }) => {
-    const name = m.name.split(" ")[0], r = Math.max(17 * DPR, ctx.measureText(name).width / 2 + 7 * DPR) + (p.z - 1.8) * 1.2 * DPR;
+    const name = m.name.split(" ")[0], r = RDISC;
     return { m, p, name, r, x0: X(p.x), y0: Y(p.y), x: X(p.x), y: Y(p.y) };
   });
   for (let it = 0; it < 40; it++) {
@@ -183,12 +192,13 @@ function draw() {
     const hidden = a.p.state === "g";
     const g = ctx.createRadialGradient(a.x, a.y, 0, a.x, a.y, a.r * 1.25);
     const al = hidden ? 0.28 : a.p.state === "n" ? 1 : 0.8;
-    g.addColorStop(0, a.m.color); g.addColorStop(0.7, a.m.color); g.addColorStop(1, "rgba(0,0,0,0)");
+    const [cr, cg, cb] = hex(a.m.color);
+    g.addColorStop(0, a.m.color); g.addColorStop(0.72, a.m.color); g.addColorStop(1, `rgba(${cr},${cg},${cb},0)`);
     ctx.globalAlpha = al; ctx.fillStyle = g; ctx.beginPath(); ctx.arc(a.x, a.y, a.r * 1.25, 0, 7); ctx.fill(); ctx.globalAlpha = 1;
     if (Math.hypot(a.x - a.x0, a.y - a.y0) > a.r * 0.6) {           // true position
       ctx.fillStyle = a.m.color; ctx.beginPath(); ctx.arc(a.x0, a.y0, 2.6 * DPR, 0, 7); ctx.fill();
     }
-    ctx.fillStyle = hidden ? a.m.color : "#111"; ctx.fillText(a.name, a.x, a.y + 0.5 * DPR);
+    ctx.fillStyle = hidden ? a.m.color : "#1b1b1b"; ctx.fillText(a.name, a.x, a.y + 0.5 * DPR);
   }
   ctx.textBaseline = "alphabetic";
 }
@@ -199,7 +209,7 @@ function people() {
   $("#people").innerHTML = S.d.members.map(m => `<li data-k="${m.key}" style="--c:${m.color}">
       <span class="sw"></span><span class="nm">${m.name}</span><span class="now" id="now-${m.key}"></span>
       <div class="bar">${ZORDER.filter(z => m.zones_s[z]).map(z => `<b style="width:${(100 * m.zones_s[z] / tot(m)).toFixed(1)}%" title="${ZN[z]} ${m.zones_s[z]} s"></b>`).join("")}</div>
-      <div class="meta">${m.path_m} m walked · ${ZORDER.filter(z => m.zones_s[z]).map(z => `${ZN[z].toLowerCase()} ${m.zones_s[z]} s`).join(" · ")}</div></li>`).join("");
+      <div class="meta">${m.rel ? `mostly stage ${m.rel.side} · next to ${m.rel.neighbour} ${m.rel.neighbour_pct}% of the time · ` : ""}${m.path_m} m walked · ${ZORDER.filter(z => m.zones_s[z]).map(z => `${ZN[z].toLowerCase()} ${m.zones_s[z]} s`).join(" · ")}</div></li>`).join("");
   $("#people").insertAdjacentHTML("afterend", `<p class="hint">Click a name to see her alone; click others to add them.</p>`);
   $("#people").querySelectorAll("li").forEach(li => li.onclick = () => {
     const k = li.dataset.k;
@@ -212,7 +222,7 @@ function people() {
 }
 function nowZones() {
   for (const m of S.d.members) {
-    const p = pos(m, S.t), el = document.getElementById(`now-${m.key}`);
+    const p = pos(m, S.dt), el = document.getElementById(`now-${m.key}`);
     if (el) el.textContent = !p ? "" : p.state === "g" ? "out of frame" : (ZN[p.zone] || "");
   }
 }
@@ -231,7 +241,7 @@ function nowMoment() {
   const ms = (S.d.moments || []).filter(m => m.t != null);
   let cur = null; for (const m of ms) if (m.t <= S.t + 0.5) cur = m;
   const el = $("#cap");
-  if (!cur || S.t > S.d.t1 + 6) { el.classList.remove("on"); return; }
+  if (!cur || S.t > 302) { el.classList.remove("on"); return; }
   if (el.dataset.t !== String(cur.t)) { el.dataset.t = cur.t; el.innerHTML = `<b>${cur.title}</b><span>${cur.text}</span>`; }
   el.classList.add("on");
   document.querySelectorAll("#moments li").forEach(li => li.classList.toggle("cur", S.d.moments[+li.dataset.i] === cur));
@@ -258,17 +268,17 @@ function loop(now) {
     if (vt !== S.rawVt || !S.anchor) { const pred = S.anchor ? S.anchor.vt + (now - S.anchor.pf) / 1000 * rate : vt;
       if (!S.anchor || Math.abs(pred - vt) > 0.12) S.anchor = { vt, pf: now }; S.rawVt = vt; }
     S.t = S.anchor.vt + (now - S.anchor.pf) / 1000 * rate + S.off; S.dirty = true;
-  } else if (!S.ytReady && S.playing) { S.t += dt; if (S.t > S.d.t1 + 4) S.playing = false; S.dirty = true; }
+  } else if (!S.ytReady && S.playing) { S.t += dt; if (S.t > 300) S.playing = false; S.dirty = true; }
   else S.anchor = null;
   if (S.dirty) {
-    draw(); nowZones(); nowMoment(); S.dirty = false;
+    S.dt = toData(S.t); draw(); nowZones(); nowMoment(); S.dirty = false;
     $("#time").value = S.t; $("#tlabel").textContent = fmt(S.t); $("#clock").textContent = fmt(S.t);
   }
   requestAnimationFrame(loop);
 }
 
 async function init() {
-  S.d = await fetch("data/stage.json?v=5").then(r => r.json());
+  S.d = await fetch("data/stage.json?v=6").then(r => r.json());
   S.on = new Set(S.d.members.map(m => m.key));
   $("#nObs").textContent = S.d.kinds.gozlem;
   for (const m of S.d.members) { PATH[m.key] = []; for (let t = S.d.t0; t <= S.d.t1 + 0.01; t += 0.4) { const p = pos(m, t); if (p) PATH[m.key].push([t, p.x, p.y]); } }
@@ -277,7 +287,7 @@ async function init() {
   const tag = document.createElement("script"); tag.src = "https://www.youtube.com/iframe_api"; document.head.appendChild(tag);
   $("#play").onclick = () => {
     if (S.ytReady) { S.playing ? S.yt.pauseVideo() : (S.yt.seekTo(Math.max(0, S.t - S.off), true), S.yt.playVideo()); }
-    else { S.playing = !S.playing; if (S.t >= S.d.t1) S.t = S.d.t0 - 2; $("#play").textContent = S.playing ? "❚❚" : "▶"; }
+    else { S.playing = !S.playing; if (S.t >= 298) S.t = 27; $("#play").textContent = S.playing ? "❚❚" : "▶"; }
   };
   $("#time").oninput = e => setT(+e.target.value, true);
   document.querySelectorAll(".seg button").forEach(b => b.onclick = () => {

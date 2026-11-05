@@ -32,8 +32,24 @@ rotation, not a mirror, so left and right stay as the camera sees them. It then 
 The page draws the stage on a canvas. Positions run through a Catmull-Rom curve between the 2 s samples, and the
 YouTube player's clock drives the time.
 
-Heat: every sample counts for 2 s as a radial glow that fades to zero 2.6 m from the performer. Glows are weighted
+Heat: every sample counts for 2 s as a radial glow that fades to zero 3.2 m from the performer. Glows are weighted
 by certainty: clear 1.0, approximate 0.6, silhouette 0.4. "Not visible" samples are left out of the heat map.
+
+## Sync with the video
+The positions were noted on a clock that drifts against the published video: about 3 s at the start and about 40 s
+by the move to the front block. `prepare.py` therefore stores six anchor moments, checked by eye against the video
+(`WARP`):
+
+| Moment | Data clock | Video |
+|---|---|---|
+| Silhouettes appear | 0:26 | 0:29 |
+| First step down | 0:56 | 1:00 |
+| Off the stairs | 1:12 | 1:16 |
+| Start of the run | 3:42 | 4:23 |
+| Arrival at the front block | 3:46 | 4:28 |
+| End | 4:50 | 4:56 |
+
+The page interpolates linearly between the anchors. A "map vs. video" control allows ±6 s of fine-tuning.
 
 ## Limits
 Screen positions are not surveyed coordinates. Camera cuts and people out of frame make every point an estimate,
