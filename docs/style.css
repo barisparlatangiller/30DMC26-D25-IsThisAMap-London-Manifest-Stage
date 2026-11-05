@@ -22,8 +22,8 @@ main { flex: 1; display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(3
 .compass { position: absolute; top: 11px; left: 20px; font-size: 12px; letter-spacing: .12em; color: var(--ink3); text-transform: uppercase; }
 .compass span { margin-left: 6px; }
 .aud { position: absolute; bottom: 12px; left: 0; right: 0; text-align: center; font-size: 12px; letter-spacing: .3em; color: var(--ink3); text-transform: uppercase; }
-.cap { position: absolute; left: 0; right: 0; bottom: -26px; text-align: center; font-size: 12px; color: var(--ink3); }
-.stagebox { margin-bottom: 26px; }
+.cap { position: absolute; left: 0; right: 0; top: calc(100% + 8px); text-align: center; font-size: 12px; color: var(--ink3); }
+.stagebox { margin-bottom: 34px; }
 .clock { position: absolute; top: 8px; right: 20px; text-align: right; }
 .clock span { font-family: var(--mono); font-size: 22px; font-weight: 500; }
 .clock small { display: block; font-size: 11px; color: var(--ink3); letter-spacing: .08em; text-transform: uppercase; }
@@ -63,8 +63,9 @@ footer { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wr
 
 @media (max-width: 900px) {
   header { padding: 16px 16px 4px; }
-  main { grid-template-columns: 1fr; padding: 10px 16px; gap: 16px; }
-  .side { order: -1; }
+  main { display: flex; flex-direction: column; padding: 10px 16px; gap: 14px; }
+  .side { display: contents; }
+  .video { order: 1; } .transport { order: 2; } .stagebox { order: 3; margin-bottom: 52px; } .modes { order: 4; } #people { order: 5; } .sync { order: 6; }
   .stagebox { padding: 32px 8px 34px; }
   #people { grid-template-columns: 1fr 1fr; }
   footer { padding: 10px 16px 18px; }
