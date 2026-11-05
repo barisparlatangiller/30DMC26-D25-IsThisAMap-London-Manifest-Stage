@@ -7,27 +7,30 @@
 <meta name="description" content="#30DayMapChallenge 2026 · Day 25 · Is this a map? Six performers of Manifest, mapped on the OVO Arena Wembley stage in sync with the live video.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link href="style.css?v=3" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="style.css?v=4" rel="stylesheet">
 </head>
 <body>
-<header>
-  <div class="eb">#30DayMapChallenge · Day 25 · Is this a map? · London</div>
-  <h1>Is a stage a map?</h1>
-  <p class="sub">Manifest, <i>Intro &amp; Hileli</i>, live at OVO Arena Wembley. Six performers, 4½ minutes, 24 × 24 m of stage:
-    each one leaves a trail of her own colour, and the song draws its own map.</p>
-</header>
-
-<main>
-  <section class="stagebox">
-    <div class="compass" aria-hidden="true">N ↑ <span>back of the stage</span></div>
-    <canvas id="stage" aria-label="Stage plan with the performers' positions and their accumulated heat"></canvas>
-    <div class="aud" aria-hidden="true">▼ audience ▼</div>
-    <div class="cap">Colours add up where performers share the floor: the white glow at the front of the main stage is all six together. Click a name to see her alone.</div>
-    <div class="clock"><span id="clock">0:00</span><small id="clockNote">press play</small></div>
+<div class="app">
+  <section class="stagecol">
+    <div class="stagehead">
+      <div>
+        <div class="eb">#30DayMapChallenge · Day 25 · Is this a map?</div>
+        <h1>Is a stage a map?</h1>
+      </div>
+      <div class="clock"><span id="clock">0:26</span><small id="clockNote">press play</small></div>
+    </div>
+    <div class="stagebox">
+      <div class="dir top">Back of stage</div>
+      <canvas id="stage" aria-label="Stage plan with the performers' positions and the floor each of them covered"></canvas>
+      <div class="dir bot">Audience</div>
+    </div>
   </section>
 
-  <section class="side">
+  <aside class="side">
+    <p class="sub">Manifest, <i>Intro &amp; Hileli</i>, live at OVO Arena Wembley, London. Six performers on 24 × 24 m of stage.
+      Each one colours the floor she covers, and over 4½ minutes the song draws its own map.</p>
+
     <div class="video"><div id="yt"></div></div>
 
     <div class="transport">
@@ -36,39 +39,34 @@
       <span id="tlabel" class="mono">0:26</span>
     </div>
 
-    <div class="modes">
-      <div class="seg" role="group" aria-label="Heat mode">
-        <button data-mode="acc" class="on">Whole song so far</button>
-        <button data-mode="trail">Last 12 s</button>
-        <button data-mode="all">Full map</button>
-      </div>
-      <label class="tog"><input id="unc" type="checkbox" checked> show uncertain moments</label>
+    <div class="seg" role="group" aria-label="What the colours show">
+      <button data-mode="acc" class="on">Song so far</button>
+      <button data-mode="trail">Last 12 s</button>
+      <button data-mode="all">Whole song</button>
     </div>
 
     <ul id="people"></ul>
 
+    <label class="tog"><input id="unc" type="checkbox" checked> Include uncertain moments (silhouettes, approximate positions)</label>
+
     <details class="sync">
-      <summary>Sync and method</summary>
+      <summary>How this was made</summary>
+      <p>Every 2 seconds the position of each performer was read from the concert video (<b id="nObs"></b> direct
+        observations, the rest interpolated) and placed on an approximate stage plan: a 2.5 m platform at +3.3 m with stairs,
+        an 8 m main stage, a 7.5 m runway and an 18 m front block. Screen positions are not surveyed coordinates, so
+        every point is an estimate.</p>
+      <p>Colour: each sample counts for 2 seconds of presence, strongest where she stands and gone 1.8 m away. Where
+        several performers share the floor, the colour of whoever spent more time there leads, so the colours don't wash
+        out to white. Clear sightings count fully, approximate ones 0.6 and silhouettes 0.4. Moments when she is out of
+        frame are left out and shown as a dashed ring.</p>
       <label class="off">Video offset <input id="offset" type="range" min="-6" max="6" step="0.25" value="0">
-        <span id="offv" class="mono">0.0 s</span></label>
-      <p>Positions were read by hand from the concert video every 2 seconds (<b id="nObs"></b> direct observations, the rest
-        interpolated between them) and placed on an approximate plan of the stage: platform 2.5 m, main stage 8 m,
-        runway 7.5 × 8 m, front block 18 × 8 m. Screen positions are not surveyed stage coordinates, so every point is an
-        estimate.</p>
-      <p>Heat: each sample counts for 2 seconds and fades to nothing about 1.8 m from the performer. Weights:
-        clear 1.0, approximate 0.6, silhouette 0.4. "Not visible" moments (camera cuts, people out of frame) stay out of the
-        heat map; they are drawn as hollow, dashed rings.</p>
-      <p>Video: Manifest's official live performance on YouTube, embedded through the YouTube player. All rights stay with the
-        artists and rights holders. Stage plan and positions: Barış Parlatangiller. Built with Claude.</p>
+        <span id="offv" class="mono">0.00 s</span></label>
+      <p class="fine">Video: Manifest's official live performance on YouTube, shown with the YouTube player. All rights stay
+        with the artists and rights holders. Plan and positions: Barış Parlatangiller. Built with Claude.
+        <a href="https://github.com/barisparlatangiller/30DMC26-D25-IsThisAMap-London-Manifest-Stage" target="_blank" rel="noopener">Code &amp; method</a></p>
     </details>
-  </section>
-</main>
-
-<footer>
-  <span>Barış Parlatangiller · #30DayMapChallenge 2026 · Day 25</span>
-  <a href="https://github.com/barisparlatangiller/30DMC26-D25-IsThisAMap-London-Manifest-Stage" target="_blank" rel="noopener">code &amp; method</a>
-</footer>
-
-<script src="app.js?v=3"></script>
+  </aside>
+</div>
+<script src="app.js?v=4"></script>
 </body>
 </html>

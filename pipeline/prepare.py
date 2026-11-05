@@ -18,12 +18,12 @@ import shapely
 
 D, OUT = Path("data"), Path("docs/data")
 WHO = {  # dress colour in the source data → member, pastel colour
-    "Siyah":   ("Hilal",        "#b8a4ec"),
-    "Kizil":   ("Mina",         "#f59a9a"),
-    "Kumral":  ("Esin",         "#f4d98b"),
-    "Mavi":    ("Zeynep Oktay", "#97c6f2"),
-    "Dalgali": ("Sueda",        "#9ddbb2"),
-    "Platin":  ("Lidya",        "#f6b9dd"),
+    "Siyah":   ("Hilal",        "#c4afff"),
+    "Kizil":   ("Mina",         "#ff8c8c"),
+    "Kumral":  ("Esin",         "#ffd66b"),
+    "Mavi":    ("Zeynep Oktay", "#7cc3ff"),
+    "Dalgali": ("Sueda",        "#86e3a2"),
+    "Platin":  ("Lidya",        "#ffb0dc"),
 }
 WEIGHT = {"net": 1.0, "yaklasik": 0.6, "siluet": 0.4, "gorunmuyor": 0.0}
 
