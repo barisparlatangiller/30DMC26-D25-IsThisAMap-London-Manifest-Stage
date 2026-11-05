@@ -2,7 +2,7 @@
 const ZN = { platform: "Platform", merdiven: "Stairs", ana_sahne_on: "Main stage", runway: "Runway", on_blok: "Front block" };
 const ZORDER = ["platform", "merdiven", "ana_sahne_on", "runway", "on_blok"];
 const PART = { platform: "PLATFORM  +3.3 m", merdiven: "STAIRS", ana_sahne: "MAIN STAGE", runway: "RUNWAY", on_blok: "FRONT BLOCK" };
-const CELL = 0.1, R = 1.8, TRAIL = 12;
+const CELL = 0.1, R = 2.6, TRAIL = 12;
 const $ = s => document.querySelector(s);
 const fmt = t => `${Math.floor(t / 60)}:${String(Math.floor(Math.max(0, t) % 60)).padStart(2, "0")}`;
 const hex = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
@@ -11,6 +11,7 @@ const S = { d: null, t: 26, mode: "acc", unc: true, off: 0, on: new Set(), playi
   last: performance.now(), dirty: true, grids: {}, applied: {}, accKey: "" };
 const cv = $("#stage"), ctx = cv.getContext("2d");
 const heatCv = document.createElement("canvas"), hctx = heatCv.getContext("2d");
+const PATH = {};
 let DPR = 1, SC = 1, OX = 0, OY = 0, GW = 0, GH = 0, KER = null, KR = 0, IMG = null;
 
 // ---------- geometry
@@ -73,7 +74,7 @@ function updateGrids() {
 function paintHeat() {
   const ms = S.d.members.filter(m => S.on.has(m.key));
   const cols = ms.map(m => hex(m.color)), gs = ms.map(m => S.grids[m.key]);
-  const K = S.mode === "trail" ? 0.9 : 4.0;
+  const K = S.mode === "trail" ? 1.1 : 5.5;
   const px = IMG.data;
   for (let p = 0, q = 0; p < GW * GH; p++, q += 4) {
     let T = 0, sw = 0, r = 0, g = 0, b = 0;
@@ -139,6 +140,15 @@ function draw() {
   ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = "high";
   ctx.drawImage(heatCv, X(0), Y(0), S.d.w * SC, S.d.h * SC);
   drawOutlines();
+  // choreography texture: every path walked so far, thin, in her colour
+  const tEnd = S.mode === "all" ? S.d.t1 : S.t;
+  ctx.lineWidth = 1.3 * DPR; ctx.lineCap = "round"; ctx.lineJoin = "round";
+  for (const m of S.d.members) {
+    if (!S.on.has(m.key)) continue;
+    const pts = PATH[m.key]; ctx.beginPath(); let n = 0;
+    for (const [t, x, y] of pts) { if (t > tEnd) break; n++ ? ctx.lineTo(X(x), Y(y)) : ctx.moveTo(X(x), Y(y)); }
+    ctx.strokeStyle = m.color; ctx.globalAlpha = S.mode === "trail" ? 0.18 : 0.5; ctx.stroke(); ctx.globalAlpha = 1;
+  }
   if (S.mode === "all") return;
 
   const live = S.d.members.filter(m => S.on.has(m.key)).map(m => ({ m, p: pos(m, S.t) })).filter(o => o.p && (S.unc || o.p.state !== "g"));
@@ -218,6 +228,26 @@ function nowZones() {
   }
 }
 
+// ---------- moments: facts from the positions, each a jump point in the video
+function moments() {
+  const ms = S.d.moments || [];
+  $("#moments").innerHTML = ms.map((m, i) => `<li data-i="${i}">${m.t != null ? `<button class="tchip" data-t="${m.t}">${fmt(m.t)}</button>` : `<span class="tchip dim">all</span>`}
+    <div><b>${m.title}</b><p>${m.text}</p></div></li>`).join("");
+  $("#moments").querySelectorAll(".tchip[data-t]").forEach(b => b.onclick = () => {
+    setT(+b.dataset.t - 1, true);
+    if (S.mode === "all") document.querySelector('.seg [data-mode=acc]').click();
+  });
+}
+function nowMoment() {
+  const ms = (S.d.moments || []).filter(m => m.t != null);
+  let cur = null; for (const m of ms) if (m.t <= S.t + 0.5) cur = m;
+  const el = $("#cap");
+  if (!cur || S.t > S.d.t1 + 6) { el.classList.remove("on"); return; }
+  if (el.dataset.t !== String(cur.t)) { el.dataset.t = cur.t; el.innerHTML = `<b>${cur.title}</b><span>${cur.text}</span>`; }
+  el.classList.add("on");
+  document.querySelectorAll("#moments li").forEach(li => li.classList.toggle("cur", S.d.moments[+li.dataset.i] === cur));
+}
+
 // ---------- YouTube: the video is the clock
 window.onYouTubeIframeAPIReady = () => {
   S.yt = new YT.Player("yt", {
@@ -236,17 +266,18 @@ function loop(now) {
   if (S.ytReady && S.yt.getPlayerState && S.yt.getPlayerState() === 1) { S.t = S.yt.getCurrentTime() + S.off; S.dirty = true; }
   else if (!S.ytReady && S.playing) { S.t += dt; if (S.t > S.d.t1 + 4) S.playing = false; S.dirty = true; }
   if (S.dirty) {
-    draw(); nowZones(); S.dirty = false;
+    draw(); nowZones(); nowMoment(); S.dirty = false;
     $("#time").value = S.t; $("#tlabel").textContent = fmt(S.t); $("#clock").textContent = fmt(S.t);
   }
   requestAnimationFrame(loop);
 }
 
 async function init() {
-  S.d = await fetch("data/stage.json?v=4").then(r => r.json());
+  S.d = await fetch("data/stage.json?v=5").then(r => r.json());
   S.on = new Set(S.d.members.map(m => m.key));
   $("#nObs").textContent = S.d.kinds.gozlem;
-  initGrids(); resize(); people();
+  for (const m of S.d.members) { PATH[m.key] = []; for (let t = S.d.t0; t <= S.d.t1; t += 0.4) { const p = pos(m, t); if (p) PATH[m.key].push([t, p.x, p.y]); } }
+  initGrids(); resize(); people(); moments();
   new ResizeObserver(resize).observe(cv);
   const tag = document.createElement("script"); tag.src = "https://www.youtube.com/iframe_api"; document.head.appendChild(tag);
   $("#play").onclick = () => {

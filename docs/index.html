@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link href="style.css?v=4" rel="stylesheet">
+<link href="style.css?v=5" rel="stylesheet">
 </head>
 <body>
 <div class="app">
@@ -23,6 +23,7 @@
     <div class="stagebox">
       <div class="dir top">Back of stage</div>
       <canvas id="stage" aria-label="Stage plan with the performers' positions and the floor each of them covered"></canvas>
+      <div id="cap" class="cap"></div>
       <div class="dir bot">Audience</div>
     </div>
   </section>
@@ -47,6 +48,9 @@
 
     <ul id="people"></ul>
 
+    <h2>Moments</h2>
+    <ol id="moments"></ol>
+
     <label class="tog"><input id="unc" type="checkbox" checked> Include uncertain moments (silhouettes, approximate positions)</label>
 
     <details class="sync">
@@ -67,6 +71,6 @@
     </details>
   </aside>
 </div>
-<script src="app.js?v=4"></script>
+<script src="app.js?v=5"></script>
 </body>
 </html>

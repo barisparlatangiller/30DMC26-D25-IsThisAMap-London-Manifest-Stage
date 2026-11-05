@@ -77,3 +77,49 @@ for m in members:
     print(m["name"], m["path_m"], m["zones_s"], m["s"][0])
 for p in parts:
     print(p["id"], p["poly"][:3])
+
+
+# ---------- moments: facts computed from the positions, each one a jump point in the video
+def moments(d):
+    M = d["members"]; T = [s[0] for s in M[0]["s"]]
+    fm = lambda t: f"{t // 60}:{t % 60:02d}"
+    P = np.array([[[s[1], s[2]] for s in m["s"]] for m in M]); V = np.array([[s[5] != "g" for s in m["s"]] for m in M])
+    Z = [[s[6] for s in m["s"]] for m in M]; first = lambda m: m["name"].split(" ")[0]
+    out = []
+    spread = np.array([np.linalg.norm(P[V[:, k], k] - P[V[:, k], k].mean(0), axis=1).mean() if V[:, k].sum() >= 5 else np.nan
+                       for k in range(len(T))])
+    k0 = int(np.nanargmin(spread))
+    out.append({"t": T[k0], "title": "Six on the platform",
+                "text": f"The song opens with all six on the raised platform, 3.3 m above the floor, on average {spread[k0]:.1f} m from their centre: the tightest formation of the song."})
+    leave = [(next(t for t, z in zip(T, zz) if z != "platform"), m) for m, zz in zip(M, Z)]
+    t1, m1 = min(leave, key=lambda x: x[0]); tl = max(t for t, _ in leave)
+    out.append({"t": t1, "title": "Down the stairs",
+                "text": f"{first(m1)} is the first to step down, at {fm(t1)}. By {fm(tl)} the platform is empty."})
+    run = [t for t, z in zip(T, Z[0]) if z == "runway"]
+    span = (run[0] if run else T[-1]) - tl
+    out.append({"t": tl + 10, "title": "The main stage",
+                "text": f"For {span // 60} min {span % 60:02d} s, from {fm(tl)} to {fm(tl + span)}, the main stage is the whole world. The bright band at its front edge is where all six spend most of the song."})
+    sp = np.linalg.norm(np.diff(P, axis=1), axis=2) / 2
+    a, b = np.unravel_index(int(sp.argmax()), sp.shape)
+    out.append({"t": run[0] if run else T[b], "title": "The run",
+                "text": f"At {fm(run[0] if run else T[b])} they cross the {7.5:.1f} m runway together in a few seconds; {first(M[a])} is fastest at {sp[a, b]:.1f} m/s."})
+    all6 = [t for k, t in enumerate(T) if all(Z[i][k] == "on_blok" for i in range(len(M)))]
+    if all6:
+        out.append({"t": all6[0], "title": "In front of the crowd",
+                    "text": f"From {fm(all6[0])} all six hold the front block, closest to the audience, until the end ({all6[-1] - all6[0] + 2} s)."})
+    k1 = int(np.nanargmax(spread))
+    out.append({"t": T[k1], "title": "Widest formation",
+                "text": f"At {fm(T[k1])} the line is at its widest: on average {spread[k1]:.1f} m from the centre, {spread[k1] / spread[k0]:.0f} times wider than at the opening."})
+    walk = sorted(((m["path_m"], first(m)) for m in M), reverse=True)
+    hid = sorted(((int((~V[i]).sum() * 2), first(m)) for i, m in enumerate(M)), reverse=True)
+    out.append({"t": None, "title": "Who covers the most ground",
+                "text": f"{walk[0][1]} walks {walk[0][0]:.0f} m, {walk[-1][1]} {walk[-1][0]:.0f} m. Over the whole song each moves at about a quarter of a metre per second."})
+    out.append({"t": None, "title": "Hard to follow",
+                "text": f"The camera loses {hid[0][1]} for {hid[0][0]} s, {hid[-1][1]} for only {hid[-1][0]} s. Those moments stay out of the colour map."})
+    return out
+
+
+out["moments"] = moments(out)
+(OUT / "stage.json").write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":")))
+for m in out["moments"]:
+    print(m["t"], m["title"], "—", m["text"])
