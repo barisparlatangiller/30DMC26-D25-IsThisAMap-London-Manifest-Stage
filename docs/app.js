@@ -159,7 +159,7 @@ function draw() {
     ctx.strokeStyle = m.color; ctx.globalAlpha = 0.7; ctx.lineWidth = 2.2 * DPR; ctx.lineCap = "round"; ctx.stroke(); ctx.globalAlpha = 1;
   }
   // dots: solid colour, black outline, own-colour halo — no white
-  const rad = p => (7 + (p.z - 1.8) * 1.2) * DPR;
+  const rad = p => (9 + (p.z - 1.8) * 1.4) * DPR;
   for (const { m, p } of live) {
     const x = X(p.x), y = Y(p.y), r = rad(p);
     if (p.state === "g") {
@@ -168,7 +168,7 @@ function draw() {
     }
     ctx.globalAlpha = p.state === "n" ? 0.35 : 0.2; ctx.fillStyle = m.color; ctx.beginPath(); ctx.arc(x, y, r * 2.1, 0, 7); ctx.fill(); ctx.globalAlpha = 1;
     ctx.fillStyle = m.color; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill();
-    ctx.strokeStyle = "#000"; ctx.lineWidth = 2 * DPR; ctx.stroke();
+    ctx.strokeStyle = "#000"; ctx.lineWidth = 1.5 * DPR; ctx.stroke();
   }
   // name pills, placed so they never overlap each other or a dot; leader line when moved away
   ctx.font = `700 ${12.5 * DPR}px "Inter Tight"`; ctx.textAlign = "left"; ctx.textBaseline = "middle";

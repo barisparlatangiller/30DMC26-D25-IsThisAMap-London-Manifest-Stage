@@ -59,10 +59,10 @@ h2 { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: v
 .tchip { font-family: var(--mono); font-size: 12px; height: 26px; border-radius: 13px; border: 1px solid var(--line2); background: none; color: var(--ink); cursor: pointer; }
 .tchip:hover { background: var(--ink); color: #0b0b0b; }
 .tchip.dim { display: grid; place-items: center; color: var(--ink3); cursor: default; }
-.cap { position: absolute; left: 50%; bottom: 34px; transform: translate(-50%, 8px); max-width: min(560px, 86%); background: rgba(11,11,11,.86);
+.cap { position: relative; width: min(640px, 100%); min-height: 62px; margin-top: 6px; background: rgba(11,11,11,.86);
   border: 1px solid var(--line2); border-radius: 8px; padding: 10px 14px; font-size: 13.5px; line-height: 1.45; color: var(--ink2);
-  opacity: 0; transition: opacity .4s, transform .4s; pointer-events: none; backdrop-filter: blur(4px); }
-.cap.on { opacity: 1; transform: translate(-50%, 0); }
+  opacity: 0; transition: opacity .4s; pointer-events: none; backdrop-filter: blur(4px); }
+.cap.on { opacity: 1; }
 .cap b { display: block; color: var(--ink); font-size: 15px; margin-bottom: 1px; }
 .tog { font-size: 13px; color: var(--ink2); display: flex; gap: 8px; align-items: flex-start; line-height: 1.4; }
 .tog input { accent-color: var(--ink); margin-top: 2px; }
@@ -77,7 +77,6 @@ h2 { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: v
   .stagecol, .side { display: contents; }
   .stagehead { order: 1; margin: 0; } .video { order: 2; } .transport { order: 3; } .stagebox { order: 4; }
   .seg { order: 5; } #people { order: 6; } .hint { order: 7; } h2 { order: 8; margin: 6px 0 0; } #moments { order: 9; } .sub { order: 10; } .tog { order: 11; } .sync { order: 12; }
-  .cap { position: static; transform: none; max-width: none; margin-top: 8px; }
   h1 { font-size: 40px; }
   #stage { flex: none; aspect-ratio: 1 / 1.02; }
 }
