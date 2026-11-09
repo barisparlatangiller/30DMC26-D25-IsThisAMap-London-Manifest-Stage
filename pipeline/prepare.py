@@ -135,7 +135,7 @@ DEPTH = [
     (152, [0, -2.0, -2.5, -2.0, 0, 0]), (164, [0, -2.5, -2.5, -2.5, 0, 0]), (166.5, [0, -2.0, -2.2, -2.0, -1.0, 0]),
     (170, [0, 0, 0, 0, 0, 0]), (179, [0, 0, 0, -1.0, 0, 0]), (181.5, [-0.5, 0, 0, 0, 0, 0]), (189, [0, 0, 0, 0, 0, 0]),
     (199, [0, 0, 0, 0, 0, -0.4]), (214, [-1.0, 0, 0, 0, -0.4, 0]), (220, [0, 0, 0, 0, 0, 0]),
-    (232, [0, 0, 0, 0, 0, 0]), (234, [0, 0, -0.9, 0, 0.4, 0]), (238, [0, 0, -0.5, 0, 0.2, 0]), (249, [0, 0.2, 0, -0.4, 0, 0]), (256, [0, 0, 0, 0, 0, 0]), (262, [0, 0, 0, 0, 0, 0]), (264, [0.8, 0.4, 0, -0.4, -0.8, -1.2]), (269, [0, 0, 0, 0, 0, 0]),
+    (232, [0, 0, 0, 0, 0, 0]), (234, [0, 0, -0.9, 0, 0.4, 0]), (238, [0, 0, -0.5, 0, 0.2, 0]), (249, [0, 0.2, 0, -0.4, 0, 0]), (256, [0, 0, 0, 0, 0, 0]), (262, [0, 0, 0, 0, 0, 0]), (269, [0, 0, 0, 0, 0, 0]),
     (276.5, [0, 0, 0, 0, -0.3, -0.5]), (279, [0, 0, 0, 0, 0, 0]), (289, [0, 0.4, 0, -0.5, -0.7, 0.6]), (294, [0, 0, 0, 0, 0, 0]),
 ]
 _wa = np.array(WARP_, dtype=float)
@@ -165,6 +165,17 @@ for va, vb, nm, nx, dy in NAMED:
         if va <= vt <= vb:
             if nx is not None: r[1] = nx
             if dy is not None: r[2] = round(r[2] + dy, 2)
+
+# 5) 4:21-4:39: the notes had the six rushing to the front edge and back. Seen again from all angles (side camera at 4:21-4:24,
+#    from behind at 4:29, wide at 4:30-4:31, front at 4:32), they only settle into one line and drift slightly back. So between
+#    the last sample before 4:21 and the first one after 4:39 each glides on a straight line.
+_vts = [float(np.interp(r[0], _wa[:, 0], _wa[:, 1])) for r in members[0]["s"]]
+k0 = max(k for k, v in enumerate(_vts) if v <= 261.5); k1 = min(k for k, v in enumerate(_vts) if v >= 279.0)
+for m in members:
+    a0, a1 = m["s"][k0], m["s"][k1]
+    for k in range(k0 + 1, k1):
+        f = (_vts[k] - _vts[k0]) / (_vts[k1] - _vts[k0]); r = m["s"][k]
+        r[1] = round(a0[1] + f * (a1[1] - a0[1]), 2); r[2] = round(a0[2] + f * (a1[2] - a0[2]), 2); r[6] = "on_blok"
 
 out = {"w": round(W, 2), "h": round(H, 2), "parts": parts, "members": members,
        "t0": int(pts.saniye.min()), "t1": int(pts.saniye.max()), "step": 2,
