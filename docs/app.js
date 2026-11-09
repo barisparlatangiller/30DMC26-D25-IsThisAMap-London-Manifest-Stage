@@ -120,7 +120,7 @@ function labelSprite(name) {                  // the name written along the figu
   const k = 4, w = 14, h = 12 + name.length * 7.2, c = document.createElement("canvas"); c.width = w * k; c.height = h * k;
   const g = c.getContext("2d"); g.scale(k, k); g.translate(w / 2, h / 2); g.rotate(-Math.PI / 2);
   g.font = "800 10px Manrope, sans-serif"; g.textAlign = "center"; g.textBaseline = "middle";
-  g.lineWidth = 2.4; g.strokeStyle = "rgba(255,255,255,.55)"; g.strokeText(name, 0, 0.5); g.fillStyle = "#1a0f33"; g.fillText(name, 0, 0.5);
+  g.lineWidth = 2.4; g.strokeStyle = "rgba(11,8,20,.75)"; g.strokeText(name, 0, 0.5); g.fillStyle = "#1a0f33"; g.fillText(name, 0, 0.5);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
   const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, depthWrite: false, depthTest: false }));
   const H = 1.05; sp.scale.set(H * w / h, H, 1); sp.renderOrder = 10; return sp;
@@ -160,14 +160,14 @@ function buildScene() {
   const NS = 5; for (let k = 0; k < NS; k++) { const y0 = sy0 + (sy1 - sy0) * k / NS, y1 = sy0 + (sy1 - sy0) * (k + 1) / NS, h = ph * (1 - (k + 0.5) / NS);
     const g = new THREE.BoxGeometry(sx1 - sx0, h, y1 - y0); const m = new THREE.Mesh(g, stepMat); m.position.copy(W3((sx0 + sx1) / 2, (y0 + y1) / 2, h / 2)); scene.add(m);
     const e = new THREE.LineSegments(new THREE.EdgesGeometry(g), edgeMat); e.position.copy(m.position); scene.add(e); }
-  // backdrop: a lilac arch screen behind the platform, as on the night, with the band's name (set in our own type, not their logo)
+  // backdrop: a white arch screen behind the platform, as on the night, with the band's name (set in our own type, not their logo)
   { const c = document.createElement("canvas"); c.width = 2048; c.height = 900; const g = c.getContext("2d");
-    const gr = g.createRadialGradient(1024, 900, 80, 1024, 900, 980); gr.addColorStop(0, "#6a4fa3"); gr.addColorStop(0.55, "#4f3784"); gr.addColorStop(0.9, "rgba(60,40,110,.6)"); gr.addColorStop(1, "rgba(185,150,230,0)");
+    const gr = g.createRadialGradient(1024, 900, 80, 1024, 900, 980); gr.addColorStop(0, "#ffffff"); gr.addColorStop(0.6, "#f4f1fa"); gr.addColorStop(0.9, "rgba(236,230,248,.85)"); gr.addColorStop(1, "rgba(236,230,248,0)");
     g.fillStyle = gr; g.beginPath(); g.ellipse(1024, 900, 900, 860, 0, Math.PI, 2 * Math.PI); g.fill();
-    g.font = "800 190px Manrope, sans-serif"; g.textAlign = "center"; g.letterSpacing = "38px"; g.shadowColor = "rgba(255,255,255,.6)"; g.shadowBlur = 30; g.fillStyle = "#ffffff"; g.fillText("MANIFEST", 1044, 470); g.shadowBlur = 0;
-    g.letterSpacing = "0px"; g.strokeStyle = "rgba(255,255,255,.55)"; g.lineWidth = 6; g.beginPath(); g.moveTo(560, 520); g.quadraticCurveTo(1024, 560, 1490, 515); g.stroke();
+    g.font = "800 190px Manrope, sans-serif"; g.textAlign = "center"; g.letterSpacing = "38px"; g.fillStyle = "#0b0814"; g.fillText("MANIFEST", 1044, 470); g.shadowBlur = 0;
+    g.letterSpacing = "0px"; g.strokeStyle = "rgba(11,8,20,.75)"; g.lineWidth = 6; g.beginPath(); g.moveTo(560, 520); g.quadraticCurveTo(1024, 560, 1490, 515); g.stroke();
     const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; G.backTex = t; G.backCanvas = c;
-    const bd = new THREE.Mesh(new THREE.PlaneGeometry(22, 22 * 900 / 2048), new THREE.MeshBasicMaterial({ map: t, color: 0xb8b0c8, transparent: true, opacity: 0.9, fog: false, depthWrite: false }));
+    const bd = new THREE.Mesh(new THREE.PlaneGeometry(22, 22 * 900 / 2048), new THREE.MeshBasicMaterial({ map: t, color: 0xa9a4b4, transparent: true, opacity: 0.95, fog: false, depthWrite: false }));
     bd.position.set(0, ph + 22 * 900 / 2048 / 2 - 0.2, -S.d.h / 2 - 0.6); bd.renderOrder = -1; scene.add(bd); G.backdrop = bd; }
   // the colour map, on the stage and on the platform
   G.floorTex = new THREE.CanvasTexture(htex); G.floorTex.colorSpace = THREE.SRGBColorSpace;
