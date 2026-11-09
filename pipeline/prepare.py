@@ -91,10 +91,10 @@ for p in parts:
     print(p["id"], p["poly"][:3])
 
 
-# data clock → video clock. Re-checked frame by frame against the official video (9 Nov): silhouettes on the platform,
-# first steps onto the stairs (video 0:58), all six on the main stage (1:11), the wide line and solo at 2:31–2:42, regrouping
-# (2:46), the long main-stage hold under the Ajda Pekkan backdrop (3:54–4:20), the run (4:21–4:29), the end of the song (4:55).
-WARP = [[26, 29], [56, 58], [72, 71], [156, 153], [163, 159], [168, 166], [214, 214], [216, 234], [220, 261], [230, 269], [290, 295]]
+# data clock → video clock. Re-checked frame by frame against the official video (9 Nov) and with Barış: silhouettes on the
+# platform, first steps onto the stairs (0:58), all six on the main stage (1:11), the wide line and solo at 2:31–2:42,
+# regrouping (2:46), the move to the front from 3:50, arrival at the front block (3:58), the end of the song (4:55).
+WARP = [[26, 29], [56, 58], [72, 71], [156, 153], [163, 159], [168, 166], [220, 230], [230, 238], [290, 295]]
 
 
 def vw(t):

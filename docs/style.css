@@ -73,7 +73,7 @@ h1 em { font-style: normal; background: var(--rainbow); -webkit-background-clip:
 .modes button.on { background: rgba(255, 255, 255, .92); color: #140c2b; box-shadow: 0 4px 18px rgba(201, 184, 245, .35); }
 
 /* moment caption */
-.lower3 { position: fixed; left: 34px; top: 46%; max-width: min(330px, 21vw); border-radius: 18px; padding: 14px 18px 15px;
+.lower3 { position: fixed; left: 34px; top: 200px; max-width: min(330px, 21vw); border-radius: 18px; padding: 14px 18px 15px;
   opacity: 0; transform: translateY(12px); transition: opacity .5s, transform .5s cubic-bezier(.2, .8, .2, 1); pointer-events: none; }
 .lower3.on { opacity: 1; transform: none; }
 .lower3 .k { font-family: "JB Mono"; font-size: 11px; color: var(--ink3); letter-spacing: .08em; }
@@ -151,3 +151,12 @@ body.vid .clock b { font-size: 34px; } body.vid .play { display: none; }
 body.vid .marks span { font-size: 14px; }
 body.vid .lower3 { left: 60px; right: 60px; max-width: none; top: 238px; bottom: auto; text-align: center; padding: 14px 24px; }
 body.vid .lower3 b { font-size: 30px; } body.vid .lower3 span { font-size: 19px; } body.vid .lower3 .k { font-size: 15px; }
+
+/* the flat plan next to the 3D view */
+.plancard { position: fixed; left: 22px; bottom: calc(var(--dockH) + 78px); width: 230px; margin: 0; padding: 10px 10px 8px; border-radius: 20px;
+  background: var(--glass); border: 1px solid var(--edge); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); box-shadow: 0 18px 50px rgba(0,0,0,.35); }
+.plancard figcaption { font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink3); font-weight: 700; margin: 0 2px 6px; }
+.plancard canvas { display: block; width: 100%; aspect-ratio: 1; }
+body.vid .plancard { display: none; }
+@media (max-width: 900px) { .plancard { position: relative; left: auto; bottom: auto; width: auto; margin: 10px 16px; } .plancard canvas { max-width: 320px; margin: 0 auto; } }
+@media (max-height: 820px) and (min-width: 901px) { .plancard { width: 180px; } }

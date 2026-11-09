@@ -255,7 +255,19 @@ function update(now) {
   // phone lights twinkle
   G.crowd.material.opacity = 0.55 + 0.15 * Math.sin((VID ? S.t * 1000 : now) / 700);
 }
-function render(now) { stepFly(now); G.ctl.update(); update(now); G.comp.render(); }
+function render(now) { stepFly(now); G.ctl.update(); update(now); G.comp.render(); drawPlan(); }
+// the flat plan (top view), drawn next to the 3D stage
+function drawPlan() {
+  const c = $("#plan"); if (!c || !c.offsetWidth) return; const d = Math.min(2, window.devicePixelRatio || 1), W = c.offsetWidth * d, H = c.offsetHeight * d;
+  if (c.width !== W) { c.width = W; c.height = H; } const g = c.getContext("2d"), pad = 10 * d, k = Math.min((W - 2 * pad) / S.d.w, (H - 2 * pad) / S.d.h), ox = (W - S.d.w * k) / 2, oy = (H - S.d.h * k) / 2;
+  g.clearRect(0, 0, W, H); g.save(); g.translate(ox, oy);
+  for (const p of S.d.parts) { g.beginPath(); p.poly.forEach(([x, y], i) => i ? g.lineTo(x * k, y * k) : g.moveTo(x * k, y * k)); g.closePath();
+    g.fillStyle = p.id === "platform" ? "rgba(60,44,110,.55)" : p.id === "merdiven" ? "rgba(80,60,140,.5)" : "rgba(30,20,62,.7)"; g.fill(); g.strokeStyle = "rgba(236,226,255,.45)"; g.lineWidth = 1 * d; g.stroke(); }
+  g.globalCompositeOperation = "screen"; g.drawImage(htex, 0, 0, S.d.w * k, S.d.h * k); g.globalCompositeOperation = "source-over";
+  for (const m of S.d.members) { if (!S.on.has(m.key)) continue; const p = pos(m, S.dt), hidden = p.state === "g";
+    g.beginPath(); g.arc(p.x * k, p.y * k, 4.2 * d, 0, 7); g.fillStyle = hidden ? "rgba(20,14,40,.8)" : m.color; g.fill(); g.lineWidth = 1.4 * d; g.strokeStyle = hidden ? m.color : "#fff"; g.stroke(); }
+  g.restore();
+}
 
 // ── cast chips ──
 function cast() {
@@ -322,6 +334,10 @@ window.renderAt = (t, cam) => { S.t = t; if (cam) { G.fly = null; G.ctl.autoRota
 async function init() {
   S.d = await fetch("data/stage.json?v=8").then(r => r.json());
   S.on = new Set(S.d.members.map(m => m.key));
+  // calmer motion: the 2 s readings jitter, so x and y are smoothed over about ±4 s (Gaussian, σ = 3 s)
+  for (const m of S.d.members) { const n = m.s.length, sx = [], sy = [];
+    for (let k = 0; k < n; k++) { let a = 0, b = 0, w = 0; for (let j = -3; j <= 3; j++) { const q = m.s[Math.max(0, Math.min(n - 1, k + j))], g = Math.exp(-(j * j) / (2 * 1.5 * 1.5)); a += q[1] * g; b += q[2] * g; w += g; } sx.push(a / w); sy.push(b / w); }
+    m.s.forEach((q, k) => { q[1] = sx[k]; q[2] = sy[k]; }); }
   $("#nObs").textContent = S.d.kinds.gozlem;
   S.PATH = {}; for (const m of S.d.members) { S.PATH[m.key] = []; for (let t = S.d.t0; t <= S.d.t1 + 0.01; t += 0.25) { const p = pos(m, t); S.PATH[m.key].push([t, p.x, p.y, p.z]); } }
   $("#facts").innerHTML = S.d.moments.filter(m => m.t == null).map(m => `<div class="fact"><b>${m.title}</b><span>${m.text}</span></div>`).join("");
