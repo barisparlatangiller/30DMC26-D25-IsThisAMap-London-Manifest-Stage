@@ -69,12 +69,12 @@ function updateGrids() {
   for (const m of S.d.members) { const g = S.recent[m.key]; g.fill(0); if (S.mode === "all") continue;
     for (const s of m.s) { const age = t - s[0]; if (age < 0) break; if (age > 4 * TAU) continue; const w = wOf(s); if (w) stamp(g, s[1], s[2], w * Math.exp(-age / TAU)); } }
 }
-function paintHeat() {     // the performer with more presence leads (weights³), so overlaps keep a hue
+function paintHeat() {     // where performers share the floor their colours blend, in proportion to each one's presence
   const ms = S.d.members.filter(m => S.on.has(m.key)), cols = ms.map(m => hex(m.color)), gs = ms.map(m => S.grids[m.key]), rs = ms.map(m => S.recent[m.key]);
   const fl = S.mode === "acc" ? FLOOR : 1, rc = S.mode === "acc" ? 1 - FLOOR : 0, K = S.mode === "trail" ? 1.1 : S.mode === "acc" ? 3.2 : 5.5, px = IMG.data;
   for (let p = 0, q = 0; p < GW * GH; p++, q += 4) {
     let T = 0, sw = 0, r = 0, g = 0, b = 0;
-    for (let i = 0; i < gs.length; i++) { const v = fl * gs[i][p] + rc * rs[i][p]; if (v <= 0) continue; T += v; const w = v * v * v; sw += w; r += cols[i][0] * w; g += cols[i][1] * w; b += cols[i][2] * w; }
+    for (let i = 0; i < gs.length; i++) { const v = fl * gs[i][p] + rc * rs[i][p]; if (v <= 0) continue; T += v; const w = v; sw += w; r += cols[i][0] * w; g += cols[i][1] * w; b += cols[i][2] * w; }
     if (T < 1e-3) { px[q + 3] = 0; continue; }
     px[q] = r / sw; px[q + 1] = g / sw; px[q + 2] = b / sw; px[q + 3] = 255 * 0.95 * (1 - Math.exp(-T / K));
   }
