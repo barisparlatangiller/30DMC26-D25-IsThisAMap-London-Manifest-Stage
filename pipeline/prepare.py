@@ -137,10 +137,12 @@ for k in range(len(members[0]["s"])):
         if r[6] in ("ana_sahne_on", "on_blok", "runway") and off[j]:
             r[2] = round(r[2] + off[j], 2)
 
-# 4) moments where the video shows the order differently (checked second by second): Hilal stays on the left until 1:28
+# 4) moments where the video shows the order differently (checked second by second, and with Barış): from 1:10 to 1:18 Hilal
+#    stands centre front, and only at 1:18 does Esin take her place; Hilal stays on the left until 1:28
 #    and crosses during the crowd shots, Zeynep is still the leftmost at 2:14. And two moments where the video shows the two dark-haired performers somewhere else than the notes: at 3:01 Hilal is up on the
 #    bottom steps and Zeynep walks off to the right edge, at the back; at 3:09 Zeynep dances hidden right behind the line.
-NAMED = [(83.0, 88.5, "Hilal", 8.8, None), (83.0, 88.5, "Zeynep Oktay", 9.9, None), (132.0, 135.6, "Zeynep Oktay", 9.4, None),
+NAMED = [(69.0, 77.5, "Hilal", None, 0.8), (74.5, 77.5, "Hilal", 12.2, None), (74.5, 77.5, "Esin", 9.6, None),
+         (83.0, 88.5, "Hilal", 8.8, None), (83.0, 88.5, "Zeynep Oktay", 9.9, None), (132.0, 135.6, "Zeynep Oktay", 9.4, None),
          (180.0, 183.5, "Hilal", None, -2.6), (180.0, 183.5, "Zeynep Oktay", 14.6, -2.0),
          (187.5, 191.5, "Zeynep Oktay", 12.9, -1.8), (187.5, 191.5, "Hilal", 11.3, None)]
 for va, vb, nm, nx, dy in NAMED:
