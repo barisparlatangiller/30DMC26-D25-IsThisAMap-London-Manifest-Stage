@@ -253,9 +253,12 @@ function update(now) {
   }
   // spread the upright names a little where two would overlap on screen
   const L = S.d.members.filter(m => S.on.has(m.key)).map(m => { const P = G.p[m.key]; const v = P.grp.position.clone(); v.y += 2.1; v.project(G.cam); return { P, x: v.x, y: v.y, dx: 0 }; });
-  const minDx = 0.045 * (G.el.clientHeight / G.el.clientWidth) * 1.4;
-  for (let it = 0; it < 12; it++) for (let i = 0; i < L.length; i++) for (let j = i + 1; j < L.length; j++) {
-    const a = L[i], b = L[j], d = (b.x + b.dx) - (a.x + a.dx); if (Math.abs(a.y - b.y) < 0.25 && Math.abs(d) < minDx) { const s = (minDx - Math.abs(d)) / 2 * (d >= 0 ? 1 : -1); a.dx -= s; b.dx += s; } }
+  const minDx = 0.062 * (G.el.clientHeight / G.el.clientWidth) * 1.4;
+  // keep the left-to-right order: sweep sorted by screen x, then re-centre each pushed cluster on its own centre
+  L.sort((a, b) => a.x - b.x); const nx = L.map(o => o.x);
+  for (let i = 1; i < L.length; i++) if (Math.abs(L[i].y - L[i - 1].y) < 0.25 && nx[i] < nx[i - 1] + minDx) nx[i] = nx[i - 1] + minDx;
+  for (let i = 0; i < L.length;) { let j = i; while (j + 1 < L.length && nx[j + 1] - nx[j] <= minDx + 1e-9 && Math.abs(L[j + 1].y - L[j].y) < 0.25) j++;
+    let sh = 0; for (let k = i; k <= j; k++) sh += L[k].x - nx[k]; sh /= (j - i + 1); for (let k = i; k <= j; k++) L[k].dx = nx[k] + sh - L[k].x; i = j + 1; }
   for (const o of L) { const tgt = o.dx * G.cam.position.distanceTo(o.P.grp.position) * 0.55; o.P.lx = o.P.lx == null || VID ? tgt : o.P.lx + (tgt - o.P.lx) * 0.2;
     const right = new THREE.Vector3().setFromMatrixColumn(G.cam.matrixWorld, 0); o.P.lbl.position.set(right.x * o.P.lx, 2.05, right.z * o.P.lx); }
   // phone lights twinkle
