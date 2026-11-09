@@ -16,6 +16,9 @@ import geopandas as gpd
 import numpy as np
 import shapely
 
+# data clock → video clock (see the note further down)
+WARP_ = [[26, 27.5], [56, 56.5], [72, 69.5], [156, 151.5], [163, 157.5], [168, 164.5], [214, 213], [216, 232], [220, 261.5], [230, 269.5], [290, 294]]
+
 D, OUT = Path("data"), Path("docs/data")
 WHO = {  # dress colour in the source data → member, pastel colour
     "Siyah":   ("Hilal",        "#c9b8f5"),
@@ -96,6 +99,33 @@ for m in members:
         if r[6] == "ana_sahne_on" and r[0] >= 70:
             r[2] = round(min(r[2] + 1.5, 7.6), 2)
 
+# 3) front/back: the data put all six on one line. Read again from the video (9 Nov, every 2.5 s, wide shots only): who stands
+#    behind whom, as metres toward the back, by rank from the audience's left. Between readings the offset is interpolated.
+#    Video seconds; the WARP below is applied to find the data time of each sample.
+DEPTH = [
+    (74, [0, 0, 0, 0, 0, 0]), (79, [-0.3, 0, 0, -0.6, 0, -0.5]), (81.5, [0, 0, 0, -1.0, 0, -0.8]),
+    (84, [-1.2, 0, 0, -0.8, 0, -1.0]), (86.5, [-1.2, 0, 0, -1.2, 0, 0]), (91.5, [0, 0, 0, 0, 0, -0.6]),
+    (99, [0, 0, 0, 0, 0, 0]), (104, [0, 0, 0, 0, 0, -1.5]), (106.5, [0, 0, 0, 0, 0, -2.2]), (109, [0, 0, 0, 0, 0, -1.5]),
+    (113, [0, 0, 0, 0, 0, -0.4]), (116.5, [0, 0, 0, 0, -0.5, -0.5]), (134, [0, 0, -0.4, 0, -0.4, -0.6]),
+    (139, [0, -1.2, 0, 0, 0, -1.2]), (141.5, [0, 0, 0, 0, 0, 0]), (149, [0, 0, 0, 0, 0, 0]),
+    (152, [0, -2.0, -2.5, -2.0, 0, 0]), (164, [0, -2.5, -2.5, -2.5, 0, 0]), (166.5, [0, -2.0, -2.2, -2.0, -1.0, 0]),
+    (170, [0, 0, 0, 0, 0, 0]), (179, [0, 0, 0, -1.0, 0, 0]), (181.5, [-0.5, 0, 0, 0, 0, 0]), (189, [0, 0, 0, 0, 0, 0]),
+    (199, [0, 0, 0, 0, 0, -0.4]), (214, [0, -1.0, 0, 0, -0.8, 0]), (220, [0, 0, 0, 0, 0, 0]),
+    (232, [0, 0, 0, 0, 0, 0]), (262, [0, 0, 0, 0, 0, 0]), (264, [0.8, 0.4, 0, -0.4, -0.8, -1.2]), (269, [0, 0, 0, 0, 0, 0]),
+    (276.5, [0, 0, 0, 0, -0.3, -0.5]), (279, [0, 0, 0, 0, 0, 0]), (289, [0, -0.5, 0, -0.5, 0, 0]), (294, [0, 0, 0, 0, 0, 0]),
+]
+_wa = np.array(WARP_, dtype=float)
+_dv = np.array([d for d, _ in DEPTH]); _dm = np.array([o for _, o in DEPTH])
+for k in range(len(members[0]["s"])):
+    t = members[0]["s"][k][0]; vt = float(np.interp(t, _wa[:, 0], _wa[:, 1]))
+    if vt < _dv[0] or vt > _dv[-1]: continue
+    off = [float(np.interp(vt, _dv, _dm[:, j])) for j in range(6)]
+    rank = sorted(range(len(members)), key=lambda i: members[i]["s"][k][1])
+    for j, i in enumerate(rank):
+        r = members[i]["s"][k]
+        if r[6] in ("ana_sahne_on", "on_blok", "runway") and off[j]:
+            r[2] = round(r[2] + off[j], 2)
+
 out = {"w": round(W, 2), "h": round(H, 2), "parts": parts, "members": members,
        "t0": int(pts.saniye.min()), "t1": int(pts.saniye.max()), "step": 2,
        "video": "YGtNsXgYqjo", "states": {"n": "clear", "y": "approximate", "s": "silhouette", "g": "not visible"},
@@ -113,7 +143,7 @@ for p in parts:
 # platform, first steps onto the stairs (0:56), all six on the main stage (1:10), the wide line and solo at 2:31–2:44,
 # regrouping (2:44), the six at the front edge of the main stage under the big screen (3:52–4:20), the run over the
 # runway (4:20–4:28), the front block until the end of the song (4:54). Anchors sit 1.5 s earlier than the first check.
-WARP = [[26, 27.5], [56, 56.5], [72, 69.5], [156, 151.5], [163, 157.5], [168, 164.5], [214, 213], [216, 232], [220, 261.5], [230, 269.5], [290, 294]]
+WARP = WARP_
 
 
 def vw(t):

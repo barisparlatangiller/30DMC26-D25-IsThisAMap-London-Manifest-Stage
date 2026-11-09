@@ -202,6 +202,15 @@ function buildScene() {
     const lbl = labelSprite(m.name.split(" ")[0]); lbl.position.y = 0.74; grp.add(lbl);
     scene.add(grp); G.p[m.key] = { grp, body, head, pool, beam, ring, lbl };
   }
+  // backing dancers (not mapped one by one): seen in the wide shots of the video, on the main stage flanks after the descent and
+  // up on the platform during two later passages. Drawn as quiet grey figures, in video time.
+  { const mat = new THREE.MeshStandardMaterial({ color: 0x9a94ab, emissive: 0x2a2440, roughness: 0.8, transparent: true, opacity: 0 });
+    const parts = Object.fromEntries(S.d.parts.map(p => [p.id, p])), mh = 0, pH = parts.platform.h - BASE;
+    const side = [1.2, 2.6, 4.0, 5.4, 18.6, 20.0, 21.4, 22.8].map((x, i) => [x, 6.6 + (i % 2) * 0.5, mh]);
+    const top = [7.2, 9.1, 11.0, 12.9, 14.8, 16.7].map((x, i) => [x, 1.3 + (i % 2) * 0.4, pH]);
+    G.crew = { mat, groups: [[69, 80, side], [124.5, 131, top], [184, 193.5, top]].map(([a, b, pts]) => {
+      const g = new THREE.Group(); for (const [x, y, h] of pts) { const m = new THREE.Mesh(new THREE.CapsuleGeometry(0.17, 0.95, 4, 10), mat); m.position.copy(W3(x, y, h + 0.65)); g.add(m); }
+      g.visible = false; scene.add(g); return { a, b, g }; }) }; }
   // walked paths, thin lines on the stage
   G.paths = {};
   for (const m of S.d.members) { const geo = new THREE.BufferGeometry(); const arr = new Float32Array(S.PATH[m.key].length * 3); geo.setAttribute("position", new THREE.BufferAttribute(arr, 3));
@@ -254,6 +263,8 @@ function update(now) {
     P.body.visible = P.head.visible = full || true;
     let n = 0; const arr = S.PATH[m.key]; while (n < arr.length && arr[n][0] <= tEnd) n++; G.paths[m.key].geometry.setDrawRange(0, n);
   }
+  // backing dancers fade in and out with their passages
+  { let o = 0; for (const c of G.crew.groups) { const k = Math.min(1, (S.t - c.a) / 1, (c.b - S.t) / 1); c.g.visible = k > 0; if (k > 0) o = Math.max(o, k); } G.crew.mat.opacity = 0.55 * o; }
   // phone lights twinkle
   G.crowd.material.opacity = 0.55 + 0.15 * Math.sin((VID ? S.t * 1000 : now) / 700);
 }
@@ -335,7 +346,7 @@ function loop(now) {
 window.renderAt = (t, cam) => { S.t = t; if (cam) { G.fly = null; G.ctl.autoRotate = false; G.cam.position.set(...cam.p); G.ctl.target.set(...cam.t); } frameUI(t * 1000); };
 
 async function init() {
-  S.d = await fetch("data/stage.json?v=10").then(r => r.json());
+  S.d = await fetch("data/stage.json?v=11").then(r => r.json());
   S.on = new Set(S.d.members.map(m => m.key));
   $("#nObs").textContent = S.d.kinds.gozlem;
   S.PATH = {}; for (const m of S.d.members) { S.PATH[m.key] = []; for (let t = S.d.t0; t <= S.d.t1 + 0.01; t += 0.25) { const p = pos(m, t); S.PATH[m.key].push([t, p.x, p.y, p.z]); } }
