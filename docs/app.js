@@ -346,7 +346,7 @@ function loop(now) {
 window.renderAt = (t, cam) => { S.t = t; if (cam) { G.fly = null; G.ctl.autoRotate = false; G.cam.position.set(...cam.p); G.ctl.target.set(...cam.t); } frameUI(t * 1000); };
 
 async function init() {
-  S.d = await fetch("data/stage.json?v=11").then(r => r.json());
+  S.d = await fetch("data/stage.json?v=12").then(r => r.json());
   S.on = new Set(S.d.members.map(m => m.key));
   $("#nObs").textContent = S.d.kinds.gozlem;
   S.PATH = {}; for (const m of S.d.members) { S.PATH[m.key] = []; for (let t = S.d.t0; t <= S.d.t1 + 0.01; t += 0.25) { const p = pos(m, t); S.PATH[m.key].push([t, p.x, p.y, p.z]); } }
