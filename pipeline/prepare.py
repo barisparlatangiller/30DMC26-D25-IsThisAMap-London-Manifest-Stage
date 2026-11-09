@@ -51,12 +51,24 @@ def ring(g):
 parts = [{"id": r.ad, "poly": ring(r.geometry), "h": float(r.yukseklik_m)} for r in stage.itertuples()] + \
         [{"id": r.ad, "poly": ring(r.geometry), "h": float(r.yukseklik_m) + float(r.taban_m)} for r in plat.itertuples()]
 
+# the stairs end at y = 4.0 m: in the video the six reach the main-stage end of the steps there, so the last metre of the
+# drawn stairs belongs to the main stage (positions there are re-zoned and set to main-stage height)
+STAIR_END = 4.0
+MAIN_H = next(p["h"] for p in parts if p["id"] == "ana_sahne")
+# and the stairs are drawn wide (6–18 m, 5 steps): in the video all six come down side by side
+for p_ in parts:
+    if p_["id"] == "merdiven":
+        p_["poly"] = [[6.0, STAIR_END], [18.0, STAIR_END], [18.0, 2.5], [6.0, 2.5], [6.0, STAIR_END]]
+
 members = []
 for kiz, (name, col) in WHO.items():
     p = pts[pts.kiz == kiz].sort_values("saniye")
     a, b = rot(p.geometry.x.values, p.geometry.y.values)
     s = [[int(t), round(float(x), 2), round(float(y), 2), round(float(z), 2), WEIGHT[d], d[0], zo, int(v == "gozlem")]
          for t, x, y, z, d, zo, v in zip(p.saniye, a, b, p.z_m, p.durum, p.bolge, p.veri_turu)]
+    for r in s:
+        if r[6] == "merdiven" and r[2] >= STAIR_END:
+            r[6], r[3] = "ana_sahne_on", MAIN_H
     secs = {}
     for t, x, y, z, w, d, zo, o in s:
         if w > 0:
@@ -79,7 +91,10 @@ for p in parts:
     print(p["id"], p["poly"][:3])
 
 
-WARP = [[26, 29], [56, 60], [72, 76], [222, 263], [226, 268], [290, 296]]   # data clock → video clock, see below
+# data clock → video clock. Re-checked frame by frame against the official video (9 Nov): silhouettes on the platform,
+# first steps onto the stairs (video 0:58), all six on the main stage (1:11), the wide line and solo at 2:31–2:42, regrouping
+# (2:46), the long main-stage hold under the Ajda Pekkan backdrop (3:54–4:20), the run (4:21–4:29), the end of the song (4:55).
+WARP = [[26, 29], [56, 58], [72, 71], [156, 153], [163, 159], [168, 166], [214, 214], [216, 234], [220, 261], [230, 269], [290, 295]]
 
 
 def vw(t):
@@ -105,9 +120,10 @@ def moments(d):
     out.append({"t": t1, "title": "Down the stairs",
                 "text": f"{first(m1)} is the first to step down, at {fm(t1)}. By {fm(tl)} the platform is empty."})
     run = [t for t, z in zip(T, Z[0]) if z == "runway"]
-    span = dur(tl, run[0] if run else T[-1])
-    out.append({"t": tl + 10, "title": "The main stage",
-                "text": f"For {span // 60} min {span % 60:02d} s, from {fm(tl)} to {fm(run[0] if run else T[-1])}, the main stage is the whole world. The bright band at its front edge is where all six spend most of the song."})
+    tm = next(t for k, t in enumerate(T) if all(zz[k] == "ana_sahne_on" for zz in Z))     # all six down on the main stage
+    span = dur(tm, run[0] if run else T[-1])
+    out.append({"t": tm, "title": "The main stage",
+                "text": f"For {span // 60} min {span % 60:02d} s, from {fm(tm)} to {fm(run[0] if run else T[-1])}, the main stage is the whole world. The bright band at its front edge is where all six spend most of the song."})
     dts = np.array([vw(b_) - vw(a_) for a_, b_ in zip(T, T[1:])])
     sp = np.linalg.norm(np.diff(P, axis=1), axis=2) / dts
     a, b = np.unravel_index(int(sp.argmax()), sp.shape)
@@ -132,9 +148,8 @@ def moments(d):
     return out
 
 
-# data clock → video clock: the positions were read on a clock that drifts against the published video (about +3 s
-# at the start, +40 s by the move to the front block). WARP anchors were checked by eye against the video: silhouettes
-# appear, first steps down, all off the stairs, start of the run, arrival at the front block, end of the song.
+# data clock → video clock: the positions were read on a clock that does not run evenly against the published video
+# (the long main-stage hold before the run is much longer in the video). WARP anchors are listed above.
 out["warp"] = WARP
 
 

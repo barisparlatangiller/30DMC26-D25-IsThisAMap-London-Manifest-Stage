@@ -8,11 +8,11 @@
 <meta name="theme-color" content="#0a0716">
 <link rel="preload" href="fonts/manrope-latin-800-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/manrope-latin-500-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link href="style.css?v=20" rel="stylesheet">
+<link href="style.css?v=30" rel="stylesheet">
 </head>
 <body>
 <div class="haze" aria-hidden="true"><i></i><i></i><i></i></div>
-<canvas id="stage" aria-label="The stage seen from the audience: each performer's light, and the floor each of them has covered so far"></canvas>
+<div id="stage" aria-label="The stage in 3D: each performer's light, and the floor each of them has covered so far. Drag to turn, scroll to zoom."></div>
 
 <header class="brand">
   <div class="eb">#30DayMapChallenge <span>·</span> Day 25 <span>·</span> Is this a map?</div>
@@ -26,6 +26,10 @@
   <div class="vnote" id="clockNote">Press play: the map follows the video.</div>
 </aside>
 
+<div class="views" role="group" aria-label="Camera">
+  <button data-view="audience" class="on">Audience</button><button data-view="top">Top</button><button data-view="side">Side</button><button data-view="orbit">Orbit</button>
+  <span class="hint">drag to turn · scroll to zoom</span>
+</div>
 <div class="modes" role="group" aria-label="What the colours show">
   <button data-mode="acc" class="on">Footprints</button><button data-mode="trail">Last 12 s</button><button data-mode="all">Whole song</button>
 </div>
@@ -70,6 +74,7 @@
       <a href="https://barisparlatangiller.github.io/" target="_blank" rel="noopener">All 30 maps</a></p>
   </div>
 </div>
-<script src="app.js?v=20"></script>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<script type="module" src="app.js?v=30"></script>
 </body>
 </html>
