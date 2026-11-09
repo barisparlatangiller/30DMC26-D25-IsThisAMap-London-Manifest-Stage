@@ -81,9 +81,6 @@ function paintHeat() {     // the performer with more presence leads (weights³)
   hx.putImageData(IMG, 0, 0);
   // the floor texture: soft colour, only on the stage (a faint grid underneath)
   tx.clearRect(0, 0, htex.width, htex.height);
-  tx.strokeStyle = "rgba(220,205,255,.035)"; tx.lineWidth = 1;
-  for (let x = 0; x <= S.d.w; x++) { tx.beginPath(); tx.moveTo(x * HPX, 0); tx.lineTo(x * HPX, htex.height); tx.stroke(); }
-  for (let y = 0; y <= S.d.h; y++) { tx.beginPath(); tx.moveTo(0, y * HPX); tx.lineTo(htex.width, y * HPX); tx.stroke(); }
   tx.imageSmoothingEnabled = true; tx.filter = "blur(2px)"; tx.drawImage(heat, 0, 0, htex.width, htex.height); tx.filter = "none";
   tx.globalAlpha = 0.6; tx.drawImage(heat, 0, 0, htex.width, htex.height); tx.globalAlpha = 1;
   tx.globalCompositeOperation = "destination-in"; tx.fillStyle = "#fff";
@@ -149,7 +146,7 @@ function buildScene() {
   Object.assign(G, { r, scene, cam, ctl, el });
 
   const parts = Object.fromEntries(S.d.parts.map(p => [p.id, p])); BASE = parts.ana_sahne.h;
-  const deck = new THREE.MeshStandardMaterial({ color: 0x1a1236, roughness: 0.55, metalness: 0.2 });
+  const deck = new THREE.MeshStandardMaterial({ color: 0x221a42, roughness: 0.38, metalness: 0.35 });
   const side = new THREE.MeshStandardMaterial({ color: 0x120c26, roughness: 0.8, emissive: 0x0d0820 });
   const floorH = -BASE;                                                    // the arena floor
   for (const id of ["ana_sahne", "runway", "on_blok"]) { scene.add(box(parts[id].poly, 0, floorH, [deck, side])); scene.add(edges(parts[id].poly, 0)); }
@@ -160,6 +157,15 @@ function buildScene() {
   const NS = 5; for (let k = 0; k < NS; k++) { const y0 = sy0 + (sy1 - sy0) * k / NS, y1 = sy0 + (sy1 - sy0) * (k + 1) / NS, h = ph * (1 - (k + 0.5) / NS);
     const g = new THREE.BoxGeometry(sx1 - sx0, h, y1 - y0); const m = new THREE.Mesh(g, stepMat); m.position.copy(W3((sx0 + sx1) / 2, (y0 + y1) / 2, h / 2)); scene.add(m);
     const e = new THREE.LineSegments(new THREE.EdgesGeometry(g), edgeMat); e.position.copy(m.position); scene.add(e); }
+  // backdrop: a lilac arch screen behind the platform, as on the night, with the band's name (set in our own type, not their logo)
+  { const c = document.createElement("canvas"); c.width = 2048; c.height = 900; const g = c.getContext("2d");
+    const gr = g.createRadialGradient(1024, 900, 80, 1024, 900, 980); gr.addColorStop(0, "#f1e4fb"); gr.addColorStop(0.55, "#d9c3f2"); gr.addColorStop(0.9, "rgba(185,150,230,.55)"); gr.addColorStop(1, "rgba(185,150,230,0)");
+    g.fillStyle = gr; g.beginPath(); g.ellipse(1024, 900, 900, 860, 0, Math.PI, 2 * Math.PI); g.fill();
+    g.font = "800 190px Manrope, sans-serif"; g.textAlign = "center"; g.letterSpacing = "38px"; g.fillStyle = "rgba(40,22,70,.82)"; g.fillText("MANIFEST", 1044, 470);
+    g.letterSpacing = "0px"; g.strokeStyle = "rgba(40,22,70,.5)"; g.lineWidth = 6; g.beginPath(); g.moveTo(560, 520); g.quadraticCurveTo(1024, 560, 1490, 515); g.stroke();
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; G.backTex = t; G.backCanvas = c;
+    const bd = new THREE.Mesh(new THREE.PlaneGeometry(22, 22 * 900 / 2048), new THREE.MeshBasicMaterial({ map: t, color: 0x6f5f8c, transparent: true, opacity: 0.85, fog: false, depthWrite: false }));
+    bd.position.set(0, ph + 22 * 900 / 2048 / 2 - 0.2, -S.d.h / 2 - 0.6); bd.renderOrder = -1; scene.add(bd); G.backdrop = bd; }
   // the colour map, on the stage and on the platform
   G.floorTex = new THREE.CanvasTexture(htex); G.floorTex.colorSpace = THREE.SRGBColorSpace;
   const fm = new THREE.Mesh(new THREE.PlaneGeometry(S.d.w, S.d.h), new THREE.MeshBasicMaterial({ map: G.floorTex, transparent: true, opacity: 0.85, depthWrite: false, blending: THREE.AdditiveBlending }));
@@ -333,12 +339,8 @@ function loop(now) {
 window.renderAt = (t, cam) => { S.t = t; if (cam) { G.fly = null; G.ctl.autoRotate = false; G.cam.position.set(...cam.p); G.ctl.target.set(...cam.t); } frameUI(t * 1000); };
 
 async function init() {
-  S.d = await fetch("data/stage.json?v=8").then(r => r.json());
+  S.d = await fetch("data/stage.json?v=9").then(r => r.json());
   S.on = new Set(S.d.members.map(m => m.key));
-  // calmer motion: the 2 s readings jitter, so x and y are smoothed over about ±4 s (Gaussian, σ = 3 s)
-  for (const m of S.d.members) { const n = m.s.length, sx = [], sy = [];
-    for (let k = 0; k < n; k++) { let a = 0, b = 0, w = 0; for (let j = -3; j <= 3; j++) { const q = m.s[Math.max(0, Math.min(n - 1, k + j))], g = Math.exp(-(j * j) / (2 * 1.5 * 1.5)); a += q[1] * g; b += q[2] * g; w += g; } sx.push(a / w); sy.push(b / w); }
-    m.s.forEach((q, k) => { q[1] = sx[k]; q[2] = sy[k]; }); }
   $("#nObs").textContent = S.d.kinds.gozlem;
   S.PATH = {}; for (const m of S.d.members) { S.PATH[m.key] = []; for (let t = S.d.t0; t <= S.d.t1 + 0.01; t += 0.25) { const p = pos(m, t); S.PATH[m.key].push([t, p.x, p.y, p.z]); } }
   $("#facts").innerHTML = S.d.moments.filter(m => m.t == null).map(m => `<div class="fact"><b>${m.title}</b><span>${m.text}</span></div>`).join("");

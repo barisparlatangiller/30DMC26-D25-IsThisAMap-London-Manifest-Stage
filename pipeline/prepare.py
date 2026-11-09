@@ -78,6 +78,26 @@ for kiz, (name, col) in WHO.items():
                     "path_m": round(float(ln.uzunluk_m.iloc[0]), 1) if len(ln) else None,
                     "obs": int((p.veri_turu == "gozlem").sum())})
 
+# corrections from the video (checked with Barış, 9 Nov):
+# 1) on the platform the line is, left to right from the audience, Mina, Sueda, Zeynep, Hilal, Esin, Lidya
+#    (Esin and Lidya on the right, not the left); from 0:56 to 1:04 (data) they blend into the recorded stair positions
+# 2) after the stairs the six stand at the front edge of the main stage, not at the foot of the stairs: main-stage
+#    positions move 1.5 m toward the audience (at most to 7.6 m, the stage edge is at 8 m)
+ORDER0 = ["Mina", "Sueda", "Zeynep Oktay", "Hilal", "Esin", "Lidya"]
+byname = {m["name"]: m for m in members}
+for k in range(len(members[0]["s"])):
+    t = members[0]["s"][k][0]
+    if t > 64: break
+    xs = sorted(m["s"][k][1] for m in members)
+    f = 1.0 if t <= 56 else max(0.0, 1 - (t - 56) / 8)
+    for slot, nm in enumerate(ORDER0):
+        r = byname[nm]["s"][k]
+        r[1] = round(f * xs[slot] + (1 - f) * r[1], 2)
+for m in members:
+    for r in m["s"]:
+        if r[6] == "ana_sahne_on" and r[0] >= 70:
+            r[2] = round(min(r[2] + 1.5, 7.6), 2)
+
 out = {"w": round(W, 2), "h": round(H, 2), "parts": parts, "members": members,
        "t0": int(pts.saniye.min()), "t1": int(pts.saniye.max()), "step": 2,
        "video": "YGtNsXgYqjo", "states": {"n": "clear", "y": "approximate", "s": "silhouette", "g": "not visible"},
@@ -93,8 +113,9 @@ for p in parts:
 
 # data clock → video clock. Re-checked frame by frame against the official video (9 Nov) and with Barış: silhouettes on the
 # platform, first steps onto the stairs (0:58), all six on the main stage (1:11), the wide line and solo at 2:31–2:42,
-# regrouping (2:46), the move to the front from 3:50, arrival at the front block (3:58), the end of the song (4:55).
-WARP = [[26, 29], [56, 58], [72, 71], [156, 153], [163, 159], [168, 166], [220, 230], [230, 238], [290, 295]]
+# regrouping (2:44), the move to the front from 3:49, arrival at the front block (3:57), the end of the song (4:53).
+# All anchors sit 1.5 s earlier than the first check: the map ran that much behind the video.
+WARP = [[26, 27.5], [56, 56.5], [72, 69.5], [156, 151.5], [163, 157.5], [168, 164.5], [220, 228.5], [230, 236.5], [290, 293.5]]
 
 
 def vw(t):
