@@ -1,314 +1,352 @@
-/* Is a stage a map? Manifest at OVO Arena Wembley · #30DayMapChallenge 2026 Day 25 */
+/* Is a stage a map? Manifest at OVO Arena Wembley · #30DayMapChallenge 2026 · Day 25
+   The stage is drawn in perspective, as seen from the audience. The YouTube player is the clock; every performer is a
+   spotlight, and the floor keeps the colour of whoever stood there. */
 const ZN = { platform: "Platform", merdiven: "Stairs", ana_sahne_on: "Main stage", runway: "Runway", on_blok: "Front block" };
-const ZORDER = ["platform", "merdiven", "ana_sahne_on", "runway", "on_blok"];
-const PART = { platform: "PLATFORM  +3.3 m", merdiven: "STAIRS", ana_sahne: "MAIN STAGE", runway: "RUNWAY", on_blok: "FRONT BLOCK" };
-const CELL = 0.1, R = 3.2, TRAIL = 12, TAU = 18, FLOOR = 0.45;
+const PART = { ana_sahne: "MAIN STAGE", runway: "RUNWAY", on_blok: "FRONT BLOCK" };
+const CELL = 0.2, R = 3.2, TRAIL = 12, TAU = 18, FLOOR = 0.45, TPX = 28;   // heat cell (m), glow radius (m), texture px per m
+const TILT = 46 * Math.PI / 180, PERSP = 2.3;                             // camera: floor tilted 52°, viewer at 1.75 × stage size
 const $ = s => document.querySelector(s);
-const fmt = t => `${Math.floor(t / 60)}:${String(Math.floor(Math.max(0, t) % 60)).padStart(2, "0")}`;
+const fmt = t => `${Math.floor(Math.max(0, t) / 60)}:${String(Math.floor(Math.max(0, t) % 60)).padStart(2, "0")}`;
 const hex = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+const rgba = (h, a) => { const [r, g, b] = hex(h); return `rgba(${r},${g},${b},${a})`; };
+const VID = new URLSearchParams(location.search).has("video");
+if (VID) document.body.classList.add("vid");
 
 const S = { d: null, t: 29, dt: 26, mode: "acc", unc: true, off: 0, on: new Set(), playing: false, yt: null, ytReady: false,
-  last: performance.now(), dirty: true, grids: {}, applied: {}, accKey: "" };
+  last: performance.now(), dirty: true, grids: {}, recent: {}, applied: {}, accKey: "", heatT: -99, heatKey: "" };
+window.S = S;
 const cv = $("#stage"), ctx = cv.getContext("2d");
-const heatCv = document.createElement("canvas"), hctx = heatCv.getContext("2d");
+const heat = document.createElement("canvas"), hx = heat.getContext("2d");      // heat grid image (1 px = CELL)
+const tex = document.createElement("canvas"), tx = tex.getContext("2d");        // floor texture (TPX px per m), drawn in perspective
 const PATH = {}, DISP = {};
-let DPR = 1, SC = 1, OX = 0, OY = 0, GW = 0, GH = 0, KER = null, KR = 0, IMG = null;
+let DPR = 1, SC = 1, CX = 0, CY = 0, P = 1000, GW = 0, GH = 0, KER = null, KR = 0, IMG = null, W = 0, H = 0;
 
-// ---------- clocks: the video clock drives everything; positions were recorded on a clock that drifts against it
+// ── clocks: the video drives everything; the positions were noted on a clock that drifts against it ──
 function toData(v) {
   const w = S.d.warp; if (!w) return v;
   if (v <= w[0][1]) return v - (w[0][1] - w[0][0]);
   for (let i = 1; i < w.length; i++) if (v <= w[i][1]) { const f = (v - w[i - 1][1]) / (w[i][1] - w[i - 1][1]); return w[i - 1][0] + f * (w[i][0] - w[i - 1][0]); }
   return v - (w[w.length - 1][1] - w[w.length - 1][0]);
 }
-
-// ---------- geometry
-function resize() {
-  const r = cv.getBoundingClientRect();
-  DPR = Math.min(2, window.devicePixelRatio || 1);
-  cv.width = Math.round(r.width * DPR); cv.height = Math.round(r.height * DPR);
-  const pad = 10 * DPR;
-  SC = Math.min((cv.width - 2 * pad) / S.d.w, (cv.height - 2 * pad) / S.d.h);
-  OX = (cv.width - S.d.w * SC) / 2; OY = (cv.height - S.d.h * SC) / 2;
-  S.dirty = true;
+function toVideo(d) {
+  const w = S.d.warp;
+  if (d <= w[0][0]) return d + (w[0][1] - w[0][0]);
+  for (let i = 1; i < w.length; i++) if (d <= w[i][0]) { const f = (d - w[i - 1][0]) / (w[i][0] - w[i - 1][0]); return w[i - 1][1] + f * (w[i][1] - w[i - 1][1]); }
+  return d + (w[w.length - 1][1] - w[w.length - 1][0]);
 }
-const X = x => OX + x * SC, Y = y => OY + y * SC;
 
-// ---------- heat grids (0.1 m cells), smooth kernel that reaches zero at 1.8 m
+// ── camera: floor point (x, y) at height h (m) → screen ──
+const cT = Math.cos(TILT), sT = Math.sin(TILT);
+function proj(x, y, h = 0) {
+  const u = (x - S.d.w / 2) * SC, v = (y - S.d.h / 2) * SC, hp = h * SC;
+  const yy = v * cT - hp * sT, z = v * sT + hp * cT, k = P / (P - z);
+  return [CX + u * k, CY + yy * k, k];
+}
+function rowToV(Y, hp) { return (Y * P - Y * hp * cT + hp * P * sT) / (P * cT + Y * sT); }   // inverse for one screen row
+
+function safeRect() {
+  if (VID) return [30, 400, W - 30, $("#cast").getBoundingClientRect().top - 10];
+  if (W <= 900) return [8, 8, W - 8, H - 8];
+  const vc = $("#vcard").getBoundingClientRect(), cast = $("#cast").getBoundingClientRect();
+  return [W * 0.2, 96, W - vc.width - 40, cast.top - 14];   // between the title column, the video card and the cast
+}
+function resize() {
+  DPR = Math.min(2, window.devicePixelRatio || 1);
+  const r = cv.getBoundingClientRect(); W = r.width; H = r.height;
+  cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+  // the projected shape does not depend on the scale, so fit it once at SC = 1 and scale up
+  const [l, t, rr, b] = safeRect();
+  SC = 1; P = PERSP * S.d.w; CX = 0; CY = 0;
+  const pts = []; for (const [x, y] of [[0, 0], [S.d.w, 0], [0, S.d.h], [S.d.w, S.d.h]]) for (const h of [0, 3.3 + 2.4]) pts.push(proj(x, y, h));
+  const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
+  const bw = Math.max(...xs) - Math.min(...xs), bh = Math.max(...ys) - Math.min(...ys);
+  const s = Math.min((rr - l) / bw, (b - t) / bh) * DPR;
+  SC = s; P = PERSP * S.d.w * s;
+  CX = ((l + rr) / 2) * DPR - ((Math.max(...xs) + Math.min(...xs)) / 2) * s;
+  CY = ((t + b) / 2) * DPR - ((Math.max(...ys) + Math.min(...ys)) / 2) * s;
+  document.documentElement.style.setProperty("--vtop", `${$("#vcard").getBoundingClientRect().height + 10}px`);
+  lanes(); S.heatKey = ""; S.dirty = true;
+}
+
+// ── heat grids: smooth kernel, zero at R ──
 function initGrids() {
   GW = Math.round(S.d.w / CELL); GH = Math.round(S.d.h / CELL);
-  heatCv.width = GW; heatCv.height = GH; IMG = hctx.createImageData(GW, GH);
-  KR = Math.round(R / CELL);
-  KER = new Float32Array((2 * KR + 1) ** 2);
-  for (let j = -KR; j <= KR; j++) for (let i = -KR; i <= KR; i++) {
-    const q = (i * i + j * j) / (KR * KR);
-    KER[(j + KR) * (2 * KR + 1) + (i + KR)] = q < 1 ? (1 - q) ** 2 : 0;
-  }
-  S.recent = {};
+  heat.width = GW; heat.height = GH; IMG = hx.createImageData(GW, GH);
+  KR = Math.round(R / CELL); KER = new Float32Array((2 * KR + 1) ** 2);
+  for (let j = -KR; j <= KR; j++) for (let i = -KR; i <= KR; i++) { const q = (i * i + j * j) / (KR * KR); KER[(j + KR) * (2 * KR + 1) + (i + KR)] = q < 1 ? (1 - q) ** 2 : 0; }
   for (const m of S.d.members) { S.grids[m.key] = new Float32Array(GW * GH); S.recent[m.key] = new Float32Array(GW * GH); S.applied[m.key] = 0; }
+  tex.width = Math.round(S.d.w * TPX); tex.height = Math.round(S.d.h * TPX);
 }
 function stamp(g, x, y, w) {
   const ci = Math.round(x / CELL), cj = Math.round(y / CELL), kw = 2 * KR + 1;
-  for (let j = -KR; j <= KR; j++) {
-    const yy = cj + j; if (yy < 0 || yy >= GH) continue;
-    for (let i = -KR; i <= KR; i++) {
-      const xx = ci + i; if (xx < 0 || xx >= GW) continue;
-      const k = KER[(j + KR) * kw + (i + KR)]; if (k) g[yy * GW + xx] += w * k;
-    }
-  }
+  for (let j = -KR; j <= KR; j++) { const yy = cj + j; if (yy < 0 || yy >= GH) continue;
+    for (let i = -KR; i <= KR; i++) { const xx = ci + i; if (xx < 0 || xx >= GW) continue; const k = KER[(j + KR) * kw + (i + KR)]; if (k) g[yy * GW + xx] += w * k; } }
 }
-const wOf = s => { let w = s[4]; if (!S.unc && w < 1) w = 0; return w; };
-
+const wOf = s => { const w = s[4]; return !S.unc && w < 1 ? 0 : w; };
 function updateGrids() {
   const t = S.dt, key = `${S.mode}|${S.unc}`;
   if (S.mode === "trail") {
-    for (const m of S.d.members) {
-      const g = S.grids[m.key]; g.fill(0);
-      for (const s of m.s) { const age = t - s[0]; if (age < 0) break; if (age > TRAIL) continue; const w = wOf(s); if (w) stamp(g, s[1], s[2], w * Math.exp(-age / 5)); }
-    }
+    for (const m of S.d.members) { const g = S.grids[m.key]; g.fill(0);
+      for (const s of m.s) { const age = t - s[0]; if (age < 0) break; if (age > TRAIL) continue; const w = wOf(s); if (w) stamp(g, s[1], s[2], w * Math.exp(-age / 5)); } }
     S.accKey = ""; return;
   }
   const lim = S.mode === "all" ? Infinity : t;
   for (const m of S.d.members) {
-    const g = S.grids[m.key];
-    let n = 0; while (n < m.s.length && m.s[n][0] <= lim) n++;
+    const g = S.grids[m.key]; let n = 0; while (n < m.s.length && m.s[n][0] <= lim) n++;
     if (key !== S.accKey || n < S.applied[m.key]) { g.fill(0); S.applied[m.key] = 0; }
     for (let k = S.applied[m.key]; k < n; k++) { const w = wOf(m.s[k]); if (w) stamp(g, m.s[k][1], m.s[k][2], w); }
     S.applied[m.key] = n;
   }
   S.accKey = key;
-  // recent footprints are brighter and settle to a lasting floor (FLOOR) over ~TAU seconds
-  for (const m of S.d.members) {
-    const g = S.recent[m.key]; g.fill(0);
-    if (S.mode === "all") continue;
-    for (const s of m.s) { const age = t - s[0]; if (age < 0) break; if (age > 4 * TAU) continue; const w = wOf(s); if (w) stamp(g, s[1], s[2], w * Math.exp(-age / TAU)); }
-  }
+  for (const m of S.d.members) { const g = S.recent[m.key]; g.fill(0); if (S.mode === "all") continue;
+    for (const s of m.s) { const age = t - s[0]; if (age < 0) break; if (age > 4 * TAU) continue; const w = wOf(s); if (w) stamp(g, s[1], s[2], w * Math.exp(-age / TAU)); } }
 }
-
-// colour: the performer with more presence leads (weights ^3), so overlaps keep a hue instead of turning white
+// the performer with more presence leads (weights³), so overlaps keep a hue instead of washing out
 function paintHeat() {
-  const ms = S.d.members.filter(m => S.on.has(m.key));
-  const cols = ms.map(m => hex(m.color)), gs = ms.map(m => S.grids[m.key]), rs = ms.map(m => S.recent[m.key]);
-  const fl = S.mode === "acc" ? FLOOR : 1, rc = S.mode === "acc" ? 1 - FLOOR : 0;
-  const K = S.mode === "trail" ? 1.1 : S.mode === "acc" ? 3.2 : 5.5;
-  const px = IMG.data;
+  const ms = S.d.members.filter(m => S.on.has(m.key)), cols = ms.map(m => hex(m.color)), gs = ms.map(m => S.grids[m.key]), rs = ms.map(m => S.recent[m.key]);
+  const fl = S.mode === "acc" ? FLOOR : 1, rc = S.mode === "acc" ? 1 - FLOOR : 0, K = S.mode === "trail" ? 1.1 : S.mode === "acc" ? 3.2 : 5.5, px = IMG.data;
   for (let p = 0, q = 0; p < GW * GH; p++, q += 4) {
     let T = 0, sw = 0, r = 0, g = 0, b = 0;
-    for (let i = 0; i < gs.length; i++) {
-      const v = fl * gs[i][p] + rc * rs[i][p]; if (v <= 0) continue;
-      T += v; const w = v * v * v; sw += w; r += cols[i][0] * w; g += cols[i][1] * w; b += cols[i][2] * w;
-    }
+    for (let i = 0; i < gs.length; i++) { const v = fl * gs[i][p] + rc * rs[i][p]; if (v <= 0) continue; T += v; const w = v * v * v; sw += w; r += cols[i][0] * w; g += cols[i][1] * w; b += cols[i][2] * w; }
     if (T < 1e-3) { px[q + 3] = 0; continue; }
-    px[q] = r / sw; px[q + 1] = g / sw; px[q + 2] = b / sw;
-    px[q + 3] = 255 * 0.92 * (1 - Math.exp(-T / K));
+    px[q] = r / sw; px[q + 1] = g / sw; px[q + 2] = b / sw; px[q + 3] = 255 * 0.95 * (1 - Math.exp(-T / K));
   }
-  hctx.putImageData(IMG, 0, 0);
+  hx.putImageData(IMG, 0, 0);
 }
 
-// ---------- positions: Catmull-Rom through the 2 s samples
+// ── the floor texture: dark glossy stage, faint grid, the colour map, LED edges ──
+function polyT(p) { tx.beginPath(); p.forEach(([x, y], i) => i ? tx.lineTo(x * TPX, y * TPX) : tx.moveTo(x * TPX, y * TPX)); tx.closePath(); }
+function buildTexture() {
+  const parts = Object.fromEntries(S.d.parts.map(p => [p.id, p])), floor = ["ana_sahne", "runway", "on_blok"];
+  tx.clearRect(0, 0, tex.width, tex.height);
+  tx.save(); for (const id of floor) polyT(parts[id].poly); tx.clip();
+  const g = tx.createLinearGradient(0, 0, 0, tex.height); g.addColorStop(0, "#1c1338"); g.addColorStop(1, "#0d0920");
+  tx.fillStyle = g; tx.fillRect(0, 0, tex.width, tex.height);
+  tx.strokeStyle = "rgba(220,205,255,.07)"; tx.lineWidth = 1;
+  for (let x = 0; x <= S.d.w; x++) { tx.beginPath(); tx.moveTo(x * TPX, 0); tx.lineTo(x * TPX, tex.height); tx.stroke(); }
+  for (let y = 0; y <= S.d.h; y++) { tx.beginPath(); tx.moveTo(0, y * TPX); tx.lineTo(tex.width, y * TPX); tx.stroke(); }
+  tx.restore();
+  // the colour map, softened
+  tx.save(); tx.globalCompositeOperation = "screen"; tx.imageSmoothingEnabled = true; tx.imageSmoothingQuality = "high";
+  tx.filter = "blur(3px) saturate(1.25)"; tx.drawImage(heat, 0, 0, tex.width, tex.height); tx.filter = "none";
+  tx.globalAlpha = 0.55; tx.drawImage(heat, 0, 0, tex.width, tex.height); tx.restore();
+  // LED edges
+  tx.save(); tx.lineJoin = "round"; tx.shadowColor = "rgba(214,196,255,.9)"; tx.shadowBlur = 10; tx.strokeStyle = "rgba(236,226,255,.8)"; tx.lineWidth = 2;
+  for (const id of floor) { polyT(parts[id].poly); tx.stroke(); } tx.restore();
+  tx.font = `800 ${0.42 * TPX}px Manrope`; tx.fillStyle = "rgba(230,220,255,.28)"; tx.letterSpacing = `${0.12 * TPX}px`;
+  tx.fillText(PART.ana_sahne, 0.4 * TPX, 7.55 * TPX); tx.fillText(PART.runway, 8.55 * TPX, 15.55 * TPX); tx.fillText(PART.on_blok, 3.4 * TPX, 23.55 * TPX);
+  tx.letterSpacing = "0px";
+}
+// draw texture rows y0..y1 (m) of the floor at height h, row by row in perspective
+function drawPlane(y0, y1, h) {
+  const a = proj(0, y0, h)[1], b = proj(0, y1, h)[1], hp = h * SC;
+  for (let Y = Math.floor(a); Y < Math.ceil(b); Y++) {
+    const v = rowToV(Y - CY, hp), v2 = rowToV(Y + 1 - CY, hp), ym = v / SC + S.d.h / 2, ym2 = v2 / SC + S.d.h / 2; if (ym2 < y0 || ym > y1) continue;
+    const k = P / (P - ((v + v2) / 2 * sT + hp * cT)), half = S.d.w / 2 * SC * k, a0 = Math.max(ym, y0), a1 = Math.min(ym2, y1);
+    if (a1 <= a0) continue;
+    ctx.drawImage(tex, 0, a0 * TPX, tex.width, Math.max(0.5, (a1 - a0) * TPX), CX - half, Y + (a0 - ym) / (ym2 - ym), 2 * half, (a1 - a0) / (ym2 - ym) + 0.02);
+  }
+}
+function polyP(pts) { ctx.beginPath(); pts.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.closePath(); }
+
+// ── positions: Catmull-Rom through the 2 s samples ──
 function pos(m, t) {
-  const s = m.s, t0 = s[0][0];
-  if (t < t0 || t > s[s.length - 1][0]) return null;
-  const f = (t - t0) / 2, i = Math.min(Math.floor(f), s.length - 2), u = f - i;
-  const p = k => s[Math.max(0, Math.min(s.length - 1, k))];
+  const s = m.s, t0 = s[0][0]; if (t < t0 || t > s[s.length - 1][0]) return null;
+  const f = (t - t0) / 2, i = Math.min(Math.floor(f), s.length - 2), u = f - i, p = k => s[Math.max(0, Math.min(s.length - 1, k))];
   const cr = (a, b, c, d) => 0.5 * ((2 * b) + (-a + c) * u + (2 * a - 5 * b + 4 * c - d) * u * u + (-a + 3 * b - 3 * c + d) * u * u * u);
   const P0 = p(i - 1), P1 = p(i), P2 = p(i + 1), P3 = p(i + 2), near = u < 0.5 ? P1 : P2;
   return { x: cr(P0[1], P1[1], P2[1], P3[1]), y: cr(P0[2], P1[2], P2[2], P3[2]), z: P1[3] + (P2[3] - P1[3]) * u, state: near[5], zone: near[6] };
 }
 
-// ---------- drawing
-function poly(p) { ctx.beginPath(); p.forEach(([x, y], i) => i ? ctx.lineTo(X(x), Y(y)) : ctx.moveTo(X(x), Y(y))); ctx.closePath(); }
-function drawStage() {
-  ctx.fillStyle = "#0b0b0b"; ctx.fillRect(0, 0, cv.width, cv.height);
-  const parts = Object.fromEntries(S.d.parts.map(p => [p.id, p]));
-  for (const id of ["ana_sahne", "runway", "on_blok"]) { poly(parts[id].poly); ctx.fillStyle = "#000"; ctx.fill(); }
-  // 1 m floor grid, very faint
-  ctx.save(); for (const id of ["ana_sahne", "runway", "on_blok"]) { poly(parts[id].poly); } ctx.clip();
-  ctx.strokeStyle = "rgba(255,255,255,.045)"; ctx.lineWidth = 1;
-  for (let x = 0; x <= S.d.w; x++) { ctx.beginPath(); ctx.moveTo(X(x), Y(0)); ctx.lineTo(X(x), Y(S.d.h)); ctx.stroke(); }
-  for (let y = 0; y <= S.d.h; y++) { ctx.beginPath(); ctx.moveTo(X(0), Y(y)); ctx.lineTo(X(S.d.w), Y(y)); ctx.stroke(); }
-  ctx.restore();
-  // raised platform + stairs
-  poly(parts.platform.poly); ctx.fillStyle = "#121212"; ctx.fill();
-  poly(parts.merdiven.poly); ctx.fillStyle = "#0e0e0e"; ctx.fill();
-  const xs = parts.merdiven.poly.map(q => q[0]), ys = parts.merdiven.poly.map(q => q[1]);
-  ctx.strokeStyle = "rgba(255,255,255,.12)"; ctx.lineWidth = DPR;
-  for (let k = 1; k < 6; k++) { const yy = Math.min(...ys) + (Math.max(...ys) - Math.min(...ys)) * k / 6; ctx.beginPath(); ctx.moveTo(X(Math.min(...xs)), Y(yy)); ctx.lineTo(X(Math.max(...xs)), Y(yy)); ctx.stroke(); }
-}
-function drawOutlines() {
-  ctx.strokeStyle = "rgba(255,255,255,.32)"; ctx.lineWidth = 1.2 * DPR; ctx.lineJoin = "round";
-  for (const p of S.d.parts) { poly(p.poly); ctx.stroke(); }
-  ctx.font = `600 ${10 * DPR}px "Inter Tight"`; ctx.fillStyle = "rgba(255,255,255,.4)"; ctx.textAlign = "left";
-  ctx.letterSpacing = `${1.5 * DPR}px`;
-  const lab = (id, x, y) => ctx.fillText(PART[id], X(x), Y(y));
-  lab("platform", 0.35, 1.45); lab("ana_sahne", 0.35, 7.55); lab("runway", 8.6, 15.55); lab("on_blok", 3.35, 23.55);
-  ctx.letterSpacing = "0px";
-  ctx.strokeStyle = "rgba(255,255,255,.5)"; ctx.beginPath(); ctx.moveTo(X(19.5), Y(23.4)); ctx.lineTo(X(20.5), Y(23.4)); ctx.stroke();
-  for (let k = 0; k <= 1; k++) { ctx.beginPath(); ctx.moveTo(X(19.5 + k), Y(23.25)); ctx.lineTo(X(19.5 + k), Y(23.55)); ctx.stroke(); }
-  ctx.fillStyle = "rgba(255,255,255,.5)"; ctx.textAlign = "right"; ctx.fillText("1 m", X(20.75) + 22 * DPR, Y(23.55));
-}
-
-function rrect(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
-
+// ── one frame ──
 function draw() {
-  drawStage();
-  updateGrids(); paintHeat();
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height);
+  const key = `${S.mode}|${S.unc}|${[...S.on].join()}`;
+  if (Math.abs(S.dt - S.heatT) > 0.08 || key !== S.heatKey) { updateGrids(); paintHeat(); buildTexture(); S.heatT = S.dt; S.heatKey = key; }
   ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = "high";
-  ctx.drawImage(heatCv, X(0), Y(0), S.d.w * SC, S.d.h * SC);
-  drawOutlines();
-  // soft paths: the road she has walked so far, as a blurred band about 1 m wide
+  const parts = Object.fromEntries(S.d.parts.map(p => [p.id, p]));
+  // floor glow under the stage
+  const c0 = proj(S.d.w / 2, S.d.h * 0.55), gl = ctx.createRadialGradient(c0[0], c0[1], 0, c0[0], c0[1], S.d.w * SC * 0.9);
+  gl.addColorStop(0, "rgba(140,110,230,.20)"); gl.addColorStop(1, "rgba(140,110,230,0)"); ctx.fillStyle = gl; ctx.fillRect(0, 0, cv.width, cv.height);
+  drawPlane(2.5, S.d.h, 0);
+  // raised platform: front face, then its top (the same texture, lifted 3.3 m)
+  const pf = parts.platform.poly, ph = parts.platform.h;
+  const fy = Math.max(...pf.map(q => q[1])), fx0 = Math.min(...pf.map(q => q[0])), fx1 = Math.max(...pf.map(q => q[0]));
+  polyP([proj(fx0, fy, 0), proj(fx1, fy, 0), proj(fx1, fy, ph), proj(fx0, fy, ph)]);
+  const fg = ctx.createLinearGradient(0, proj(0, fy, ph)[1], 0, proj(0, fy, 0)[1]); fg.addColorStop(0, "#2a1d52"); fg.addColorStop(1, "#110b24");
+  ctx.fillStyle = fg; ctx.fill();
+  drawPlane(0, fy, ph);
+  ctx.save(); ctx.shadowColor = "rgba(214,196,255,.9)"; ctx.shadowBlur = 10 * DPR; ctx.strokeStyle = "rgba(236,226,255,.85)"; ctx.lineWidth = 1.6 * DPR;
+  polyP([proj(fx0, 0, ph), proj(fx1, 0, ph), proj(fx1, fy, ph), proj(fx0, fy, ph)]); ctx.stroke();
+  ctx.beginPath(); const a1 = proj(fx0, fy, 0), a2 = proj(fx1, fy, 0); ctx.moveTo(a1[0], a1[1]); ctx.lineTo(a2[0], a2[1]); ctx.stroke(); ctx.restore();
+  // stairs: from the platform edge down to the main stage
+  const st = parts.merdiven.poly, sx0 = Math.min(...st.map(q => q[0])), sx1 = Math.max(...st.map(q => q[0])), sy0 = Math.min(...st.map(q => q[1])), sy1 = Math.max(...st.map(q => q[1]));
+  ctx.save(); polyP([proj(sx0, sy0, ph), proj(sx1, sy0, ph), proj(sx1, sy1, 0), proj(sx0, sy1, 0)]); ctx.fillStyle = "rgba(34,24,66,.82)"; ctx.fill();
+  ctx.strokeStyle = "rgba(236,226,255,.38)"; ctx.lineWidth = 1 * DPR;
+  for (let k = 0; k <= 8; k++) { const yy = sy0 + (sy1 - sy0) * k / 8, hh = ph * (1 - k / 8), p1 = proj(sx0, yy, hh), p2 = proj(sx1, yy, hh); ctx.beginPath(); ctx.moveTo(p1[0], p1[1]); ctx.lineTo(p2[0], p2[1]); ctx.stroke(); }
+  ctx.restore();
+  ctx.font = `800 ${10.5 * DPR}px Manrope`; ctx.fillStyle = "rgba(230,220,255,.4)"; const pl = proj(0.5, 1.3, ph); ctx.fillText("PLATFORM  +3.3 m", pl[0], pl[1]);
+  // soft roads walked so far, on the floor
   const tEnd = S.mode === "all" ? S.d.t1 : S.dt;
-  ctx.save(); ctx.filter = `blur(${Math.round(3 * DPR)}px)`; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.lineWidth = 0.9 * SC;
-  for (const m of S.d.members) {
-    if (!S.on.has(m.key)) continue;
-    ctx.beginPath(); let n = 0;
-    for (const [t, x, y] of PATH[m.key]) { if (t > tEnd) break; n++ ? ctx.lineTo(X(x), Y(y)) : ctx.moveTo(X(x), Y(y)); }
-    ctx.strokeStyle = m.color; ctx.globalAlpha = S.mode === "trail" ? 0.08 : 0.2; ctx.stroke();
+  ctx.save(); ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.globalCompositeOperation = "screen";
+  for (const m of S.d.members) { if (!S.on.has(m.key)) continue;
+    ctx.beginPath(); let n = 0; for (const [t, x, y, z] of PATH[m.key]) { if (t > tEnd) break; const q = proj(x, y, z); n++ ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]); }
+    ctx.strokeStyle = rgba(m.color, S.mode === "trail" ? 0.1 : 0.2); ctx.lineWidth = 0.16 * SC; ctx.stroke(); }
+  ctx.restore();
+  if (S.mode === "all") { drawCrowd(); return; }
+
+  // performers: a beam from the rig, a pool of light, a glowing figure and her name
+  const live = S.d.members.filter(m => S.on.has(m.key)).map(m => ({ m, p: pos(m, S.dt) })).filter(o => o.p && (S.unc || o.p.state !== "g"));
+  live.sort((a, b) => a.p.y - b.p.y);
+  ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.filter = `blur(${Math.round(5 * DPR)}px)`;
+  for (const { m, p } of live) {
+    if (p.state === "g") continue;
+    const f = proj(p.x, p.y, p.z), top = proj(p.x, p.y, p.z + 11), al = p.state === "n" ? 1 : 0.7;
+    const wb = 1.15 * SC * f[2], wt = 0.22 * SC * top[2];
+    const bg = ctx.createLinearGradient(0, top[1], 0, f[1]); bg.addColorStop(0, rgba(m.color, 0)); bg.addColorStop(0.7, rgba(m.color, 0.08 * al)); bg.addColorStop(1, rgba(m.color, 0.2 * al));
+    ctx.fillStyle = bg; ctx.beginPath(); ctx.moveTo(top[0] - wt, top[1]); ctx.lineTo(top[0] + wt, top[1]); ctx.lineTo(f[0] + wb, f[1]); ctx.lineTo(f[0] - wb, f[1]); ctx.closePath(); ctx.fill();
+    ctx.filter = "none"; ctx.save(); ctx.translate(f[0], f[1]); ctx.scale(1, cT * 0.95); const rp = 1.5 * SC * f[2];
+    const pg = ctx.createRadialGradient(0, 0, 0, 0, 0, rp); pg.addColorStop(0, rgba(m.color, 0.75 * al)); pg.addColorStop(0.45, rgba(m.color, 0.25 * al)); pg.addColorStop(1, rgba(m.color, 0));
+    ctx.fillStyle = pg; ctx.beginPath(); ctx.arc(0, 0, rp, 0, 7); ctx.fill(); ctx.restore(); ctx.filter = `blur(${Math.round(5 * DPR)}px)`;
   }
   ctx.restore();
-  if (S.mode === "all") return;
-
-  const live = S.d.members.filter(m => S.on.has(m.key)).map(m => ({ m, p: pos(m, S.dt) })).filter(o => o.p && (S.unc || o.p.state !== "g"));
-  // name discs: soft-edged, name inside. Where performers stand closer than a disc, the discs are nudged apart just
-  // enough to stay readable; a small dot keeps the true position.
-  ctx.font = `700 ${9.5 * DPR}px "Inter Tight"`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-  const RDISC = Math.max(...S.d.members.map(m => ctx.measureText(m.name.split(" ")[0]).width)) / 2 + 4.5 * DPR;
-  const D = live.map(({ m, p }) => {
-    const name = m.name.split(" ")[0], r = RDISC;
-    return { m, p, name, r, x0: X(p.x), y0: Y(p.y), x: X(p.x), y: Y(p.y) };
-  });
-  // side by side stays side by side: overlapping discs are only spread sideways (along the line), never front/back
-  for (let it = 0; it < 30; it++) {
-    let moved = false;
-    for (let i = 0; i < D.length; i++) for (let j = i + 1; j < D.length; j++) {
-      const a = D[i], b = D[j], dx = b.x - a.x, dy = b.y - a.y, need = (a.r + b.r) * 0.92;
-      if (Math.abs(dy) < need * 0.8 && Math.abs(dx) < need) {
-        const dir = Math.abs(dx) > 1e-3 ? Math.sign(dx) : Math.sign(b.x0 - a.x0) || 1, push = (need - Math.abs(dx)) / 2;
-        a.x -= dir * push; b.x += dir * push; moved = true;
-      }
+  // figures
+  const LBL = [];
+  for (const { m, p } of live) {
+    const f = proj(p.x, p.y, p.z), hd = proj(p.x, p.y, p.z + 1.65), hidden = p.state === "g", w = 0.42 * SC * f[2];
+    if (hidden) {
+      ctx.save(); ctx.translate(f[0], f[1]); ctx.scale(1, cT); ctx.setLineDash([3 * DPR, 3 * DPR]); ctx.strokeStyle = rgba(m.color, 0.7); ctx.lineWidth = 1.4 * DPR / cT * 0.7;
+      ctx.beginPath(); ctx.arc(0, 0, 0.8 * SC * f[2], 0, 7); ctx.stroke(); ctx.restore();
+    } else {
+      ctx.save(); ctx.lineCap = "round"; ctx.shadowColor = m.color; ctx.shadowBlur = 16 * DPR;
+      const fg2 = ctx.createLinearGradient(0, hd[1], 0, f[1]); fg2.addColorStop(0, "#fff"); fg2.addColorStop(0.35, m.color); fg2.addColorStop(1, rgba(m.color, 0.55));
+      ctx.strokeStyle = fg2; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(f[0], f[1] - w * 0.5); ctx.lineTo(hd[0], hd[1] + w * 0.5); ctx.stroke();
+      ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(hd[0], hd[1] - w * 0.15, w * 0.48, 0, 7); ctx.fill(); ctx.restore();
     }
-    if (!moved) break;
+    const lp = proj(p.x, p.y, p.z + 2.35);
+    LBL.push({ m, hidden, x: lp[0], y: lp[1], x0: lp[0], k: f[2] });
   }
-  // keep the display positions smooth from frame to frame
-  for (const a of D) { const prev = DISP[a.m.key]; if (prev && Math.hypot(prev[0] - a.x, prev[1] - a.y) < 40 * DPR) { a.x = prev[0] + (a.x - prev[0]) * 0.35; } DISP[a.m.key] = [a.x, a.y]; }
-  for (const a of D) {
-    const hidden = a.p.state === "g";
-    const g = ctx.createRadialGradient(a.x, a.y, 0, a.x, a.y, a.r * 1.25);
-    const al = hidden ? 0.28 : a.p.state === "n" ? 1 : 0.8;
-    const [cr, cg, cb] = hex(a.m.color);
-    g.addColorStop(0, a.m.color); g.addColorStop(0.72, a.m.color); g.addColorStop(1, `rgba(${cr},${cg},${cb},0)`);
-    ctx.globalAlpha = al; ctx.fillStyle = g; ctx.beginPath(); ctx.arc(a.x, a.y, a.r * 1.25, 0, 7); ctx.fill(); ctx.globalAlpha = 1;
-    if (Math.hypot(a.x - a.x0, a.y - a.y0) > a.r * 0.6) {           // true position
-      ctx.fillStyle = a.m.color; ctx.beginPath(); ctx.arc(a.x0, a.y0, 2.6 * DPR, 0, 7); ctx.fill();
-    }
-    ctx.fillStyle = hidden ? a.m.color : "#1b1b1b"; ctx.fillText(a.name, a.x, a.y + 0.5 * DPR);
-  }
-  ctx.textBaseline = "alphabetic";
+  // name pills, nudged sideways where they would overlap (a line stays a line)
+  ctx.font = `800 ${12 * DPR}px Manrope`;
+  for (const L of LBL) L.w = ctx.measureText(L.m.name.split(" ")[0]).width + 16 * DPR;
+  for (let it = 0; it < 30; it++) { let mv = false;
+    for (let i = 0; i < LBL.length; i++) for (let j = i + 1; j < LBL.length; j++) { const a = LBL[i], b = LBL[j], dx = b.x - a.x, need = (a.w + b.w) / 2 + 3 * DPR;
+      if (Math.abs(b.y - a.y) < 20 * DPR && Math.abs(dx) < need) { const dir = Math.abs(dx) > 0.5 ? Math.sign(dx) : Math.sign(b.x0 - a.x0) || 1, push = (need - Math.abs(dx)) / 2; a.x -= dir * push; b.x += dir * push; mv = true; } }
+    if (!mv) break; }
+  for (const L of LBL) { const pr = DISP[L.m.key]; if (pr && Math.abs(pr - L.x) < 60 * DPR && !VID) L.x = pr + (L.x - pr) * 0.3; DISP[L.m.key] = L.x;
+    const h = 22 * DPR, x = L.x - L.w / 2, y = L.y - h;
+    ctx.save(); ctx.globalAlpha = L.hidden ? 0.45 : 1; ctx.fillStyle = L.hidden ? "rgba(20,14,40,.75)" : L.m.color; ctx.shadowColor = rgba(L.m.color, 0.8); ctx.shadowBlur = L.hidden ? 0 : 14 * DPR;
+    ctx.beginPath(); ctx.roundRect(x, y, L.w, h, h / 2); ctx.fill(); ctx.shadowBlur = 0;
+    if (L.hidden) { ctx.strokeStyle = L.m.color; ctx.setLineDash([3 * DPR, 2 * DPR]); ctx.lineWidth = 1.2 * DPR; ctx.stroke(); }
+    ctx.fillStyle = L.hidden ? L.m.color : "#160e2c"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(L.m.name.split(" ")[0], L.x, y + h / 2 + 0.5 * DPR); ctx.restore(); }
+  drawCrowd();
+}
+// the first rows of the audience: phone lights in front of the stage
+const CROWD = Array.from({ length: 170 }, (_, i) => ({ x: Math.random() * 30 - 3, y: 24.6 + Math.random() * 3.2, ph: Math.random() * 6.3, c: i % 7 }));
+function drawCrowd() {
+  ctx.save(); ctx.globalCompositeOperation = "lighter"; const now = VID ? S.t * 1000 : performance.now();
+  for (const c of CROWD) { const q = proj(c.x, c.y, 1.4); if (q[1] > cv.height || q[0] < 0 || q[0] > cv.width) continue;
+    const a = 0.25 + 0.25 * Math.sin(now / 900 + c.ph); ctx.fillStyle = c.c === 0 ? `rgba(255,214,140,${a})` : `rgba(220,210,255,${a * 0.8})`;
+    ctx.beginPath(); ctx.arc(q[0], q[1], 1.3 * DPR * q[2], 0, 7); ctx.fill(); }
+  ctx.restore();
 }
 
-// ---------- people list
-function people() {
-  const tot = m => Object.values(m.zones_s).reduce((a, b) => a + b, 0);
-  $("#people").innerHTML = S.d.members.map(m => `<li data-k="${m.key}" style="--c:${m.color}">
-      <span class="sw"></span><span class="nm">${m.name}</span><span class="now" id="now-${m.key}"></span>
-      <div class="bar">${ZORDER.filter(z => m.zones_s[z]).map(z => `<b style="width:${(100 * m.zones_s[z] / tot(m)).toFixed(1)}%" title="${ZN[z]} ${m.zones_s[z]} s"></b>`).join("")}</div>
-      <div class="meta">${m.rel ? `mostly stage ${m.rel.side} · next to ${m.rel.neighbour} ${m.rel.neighbour_pct}% of the time · ` : ""}${m.path_m} m walked · ${ZORDER.filter(z => m.zones_s[z]).map(z => `${ZN[z].toLowerCase()} ${m.zones_s[z]} s`).join(" · ")}</div></li>`).join("");
-  $("#people").insertAdjacentHTML("afterend", `<p class="hint">Click a name to see her alone; click others to add them.</p>`);
-  $("#people").querySelectorAll("li").forEach(li => li.onclick = () => {
-    const k = li.dataset.k;
-    if (S.on.has(k) && S.on.size === S.d.members.length) S.on = new Set([k]);
-    else if (S.on.has(k)) { S.on.delete(k); if (!S.on.size) S.on = new Set(S.d.members.map(m => m.key)); }
-    else S.on.add(k);
-    $("#people").querySelectorAll("li").forEach(l => l.classList.toggle("off", !S.on.has(l.dataset.k)));
+// ── cast chips ──
+function cast() {
+  $("#cast").innerHTML = S.d.members.map(m => `<div class="chip" data-k="${m.key}" style="--c:${m.color}" title="${m.path_m} m walked${m.rel ? ` · mostly stage ${m.rel.side} · next to ${m.rel.neighbour} ${m.rel.neighbour_pct}% of the time` : ""}">
+    <span class="dot"></span><span class="nm">${m.name.split(" ")[0]}</span><span class="zn" id="zn-${m.key}"></span></div>`).join("");
+  $("#cast").querySelectorAll(".chip").forEach(c => c.onclick = () => {
+    const k = c.dataset.k, all = S.on.size === S.d.members.length;
+    if (all) S.on = new Set([k]); else if (S.on.has(k)) { S.on.delete(k); if (!S.on.size) S.on = new Set(S.d.members.map(m => m.key)); } else S.on.add(k);
+    $("#cast").querySelectorAll(".chip").forEach(x => { x.classList.toggle("off", !S.on.has(x.dataset.k)); x.classList.toggle("solo", S.on.size < S.d.members.length && S.on.has(x.dataset.k)); });
     S.dirty = true;
   });
 }
-function nowZones() {
-  for (const m of S.d.members) {
-    const p = pos(m, S.dt), el = document.getElementById(`now-${m.key}`);
-    if (el) el.textContent = !p ? "" : p.state === "g" ? "out of frame" : (ZN[p.zone] || "");
-  }
+function nowZones() { for (const m of S.d.members) { const p = pos(m, S.dt), el = document.getElementById(`zn-${m.key}`); if (el) el.textContent = !p ? "" : p.state === "g" ? "out of frame" : (ZN[p.zone] || ""); } }
+
+// ── the song as six lanes: where each performer was visible, brighter when clearly seen ──
+const T0 = 20, T1 = 300, tX = (t, w) => (t - T0) / (T1 - T0) * w;
+function lanes() {
+  const c = $("#lanes"), r = c.getBoundingClientRect(), d = Math.min(2, window.devicePixelRatio || 1); if (!r.width) return;
+  c.width = r.width * d; c.height = r.height * d; const g = c.getContext("2d"), n = S.d.members.length, lh = c.height / n;
+  g.clearRect(0, 0, c.width, c.height); g.fillStyle = "rgba(255,255,255,.04)"; g.fillRect(0, 0, c.width, c.height);
+  S.d.members.forEach((m, i) => { for (const s of m.s) { const a = s[5] === "n" ? 0.95 : s[5] === "y" ? 0.6 : s[5] === "s" ? 0.38 : 0;
+    if (!a) continue; const x0 = tX(toVideo(s[0] - 1), c.width), x1 = tX(toVideo(s[0] + 1), c.width);
+    g.fillStyle = rgba(m.color, a); g.fillRect(x0, i * lh + lh * 0.18, x1 - x0 + 0.6, lh * 0.64); } });
+  $("#marks").innerHTML = (S.d.moments || []).filter(m => m.t != null).map(m => `<span data-t="${m.t}" style="left:${(100 * (m.t - T0) / (T1 - T0)).toFixed(2)}%">${m.title}</span>`).join("");
+  const sp = [...$("#marks").children]; let prev = null;                 // alternate rows where labels would collide
+  for (const el of sp) { const b = el.getBoundingClientRect(); if (prev && b.left < prev.r + 8 && !prev.lo) { el.classList.add("lo"); prev = { r: b.right, lo: true }; } else prev = { r: b.right, lo: false }; }
 }
 
-// ---------- moments: facts from the positions, each a jump point in the video
-function moments() {
-  const ms = S.d.moments || [];
-  $("#moments").innerHTML = ms.map((m, i) => `<li data-i="${i}">${m.t != null ? `<button class="tchip" data-t="${m.t}">${fmt(m.t)}</button>` : `<span class="tchip dim">all</span>`}
-    <div><b>${m.title}</b><p>${m.text}</p></div></li>`).join("");
-  $("#moments").querySelectorAll(".tchip[data-t]").forEach(b => b.onclick = () => {
-    setT(+b.dataset.t - 1, true);
-    if (S.mode === "all") document.querySelector('.seg [data-mode=acc]').click();
-  });
-}
+// ── moments: lower third ──
 function nowMoment() {
-  const ms = (S.d.moments || []).filter(m => m.t != null);
-  let cur = null; for (const m of ms) if (m.t <= S.t + 0.5) cur = m;
+  const ms = (S.d.moments || []).filter(m => m.t != null); let cur = null; for (const m of ms) if (m.t <= S.t + 0.5) cur = m;
   const el = $("#cap");
-  if (!cur || S.t > 302) { el.classList.remove("on"); return; }
-  if (el.dataset.t !== String(cur.t)) { el.dataset.t = cur.t; el.innerHTML = `<b>${cur.title}</b><span>${cur.text}</span>`; }
-  el.classList.add("on");
-  document.querySelectorAll("#moments li").forEach(li => li.classList.toggle("cur", S.d.moments[+li.dataset.i] === cur));
+  if (!cur || S.t > 302) { el.classList.remove("on"); }
+  else { if (el.dataset.t !== String(cur.t)) { el.dataset.t = cur.t; el.classList.remove("on"); void el.offsetWidth; el.innerHTML = `<div class="k">${fmt(cur.t)}</div><b>${cur.title}</b><span>${cur.text}</span>`; } el.classList.add("on"); }
+  document.querySelectorAll("#marks span").forEach(s => s.classList.toggle("cur", cur && +s.dataset.t === cur.t));
 }
 
-// ---------- YouTube: the video is the clock
+// ── YouTube: the video is the clock ──
 window.onYouTubeIframeAPIReady = () => {
-  S.yt = new YT.Player("yt", {
-    videoId: S.d.video, playerVars: { start: 20, playsinline: 1, rel: 0, modestbranding: 1 },
-    events: {
-      onReady: () => { S.ytReady = true; $("#clockNote").textContent = "synced to the video"; },
-      onStateChange: e => { S.playing = e.data === 1; $("#play").textContent = S.playing ? "❚❚" : "▶"; },
-      onError: () => { S.ytReady = false; $("#clockNote").textContent = "video unavailable · own clock"; },
-    },
-  });
+  S.yt = new YT.Player("yt", { videoId: S.d.video, playerVars: { start: 20, playsinline: 1, rel: 0, modestbranding: 1 },
+    events: { onReady: () => { S.ytReady = true; $("#clockNote").textContent = "In sync: drag the timeline or tap a moment."; },
+      onStateChange: e => { S.playing = e.data === 1; playIcon(); },
+      onError: () => { S.ytReady = false; $("#clockNote").textContent = "Video unavailable here: the map runs on its own clock."; } } });
 };
-function setT(t, seek) { S.t = Math.max(0, Math.min(310, t)); S.dirty = true; S.anchor = null; if (seek && S.ytReady) S.yt.seekTo(Math.max(0, S.t - S.off), true); }
+function playIcon() { $("#playIcon").setAttribute("d", S.playing ? "M7 5h3.5v14H7zM13.5 5H17v14h-3.5z" : "M8 5v14l11-7z"); }
+function setT(t, seek) { S.t = Math.max(T0, Math.min(T1, t)); S.dirty = true; S.anchor = null; if (seek && S.ytReady) S.yt.seekTo(Math.max(0, S.t - S.off), true); }
 
+function frameUI() {
+  S.dt = toData(S.t); draw(); nowZones(); nowMoment();
+  $("#time").value = S.t; $("#clock").textContent = fmt(S.t); $("#head").style.left = `${(100 * (S.t - T0) / (T1 - T0)).toFixed(3)}%`;
+}
 function loop(now) {
-  const dt = (now - S.last) / 1000; S.last = now;
+  const dt = Math.min(0.1, (now - S.last) / 1000); S.last = now;
   if (S.ytReady && S.yt.getPlayerState && S.yt.getPlayerState() === 1) {
-    // the player reports its time in coarse steps; run our own clock between reports and re-anchor on each new value
+    // the player reports its time in coarse steps: run our own clock between reports, re-anchor only on real jumps
     const vt = S.yt.getCurrentTime(), rate = S.yt.getPlaybackRate ? S.yt.getPlaybackRate() : 1;
     if (vt !== S.rawVt || !S.anchor) { const pred = S.anchor ? S.anchor.vt + (now - S.anchor.pf) / 1000 * rate : vt;
-      if (!S.anchor || Math.abs(pred - vt) > 0.12) S.anchor = { vt, pf: now }; S.rawVt = vt; }
+      if (!S.anchor || Math.abs(pred - vt) > 0.25) S.anchor = { vt, pf: now }; else S.anchor = { vt: pred + (vt - pred) * 0.1, pf: now }; S.rawVt = vt; }
     S.t = S.anchor.vt + (now - S.anchor.pf) / 1000 * rate + S.off; S.dirty = true;
-  } else if (!S.ytReady && S.playing) { S.t += dt; if (S.t > 300) S.playing = false; S.dirty = true; }
+  } else if (!S.ytReady && S.playing) { S.t += dt; if (S.t >= T1) { S.playing = false; playIcon(); } S.dirty = true; }
   else S.anchor = null;
-  if (S.dirty) {
-    S.dt = toData(S.t); draw(); nowZones(); nowMoment(); S.dirty = false;
-    $("#time").value = S.t; $("#tlabel").textContent = fmt(S.t); $("#clock").textContent = fmt(S.t);
-  }
-  requestAnimationFrame(loop);
+  if (S.mode !== "all") S.dirty = true;                      // the crowd lights twinkle
+  if (S.dirty) { frameUI(); S.dirty = false; }
+  if (!VID) requestAnimationFrame(loop);
 }
+window.renderAt = t => { S.t = t; frameUI(); };             // used by the video renderer
 
 async function init() {
   S.d = await fetch("data/stage.json?v=6").then(r => r.json());
   S.on = new Set(S.d.members.map(m => m.key));
   $("#nObs").textContent = S.d.kinds.gozlem;
-  for (const m of S.d.members) { PATH[m.key] = []; for (let t = S.d.t0; t <= S.d.t1 + 0.01; t += 0.4) { const p = pos(m, t); if (p) PATH[m.key].push([t, p.x, p.y]); } }
-  initGrids(); resize(); people(); moments();
+  for (const m of S.d.members) { PATH[m.key] = []; for (let t = S.d.t0; t <= S.d.t1 + 0.01; t += 0.25) { const p = pos(m, t); if (p) PATH[m.key].push([t, p.x, p.y, p.z]); } }
+  $("#facts").innerHTML = S.d.moments.filter(m => m.t == null).map(m => `<div class="fact"><b>${m.title}</b><span>${m.text}</span></div>`).join("");
+  initGrids(); cast(); resize();
   new ResizeObserver(resize).observe(cv);
-  const tag = document.createElement("script"); tag.src = "https://www.youtube.com/iframe_api"; document.head.appendChild(tag);
+  if (!VID) { const tag = document.createElement("script"); tag.src = "https://www.youtube.com/iframe_api"; document.head.appendChild(tag); }
   $("#play").onclick = () => {
     if (S.ytReady) { S.playing ? S.yt.pauseVideo() : (S.yt.seekTo(Math.max(0, S.t - S.off), true), S.yt.playVideo()); }
-    else { S.playing = !S.playing; if (S.t >= 298) S.t = 27; $("#play").textContent = S.playing ? "❚❚" : "▶"; }
+    else { S.playing = !S.playing; if (S.t >= T1 - 1) S.t = 27; playIcon(); }
   };
   $("#time").oninput = e => setT(+e.target.value, true);
-  document.querySelectorAll(".seg button").forEach(b => b.onclick = () => {
-    document.querySelectorAll(".seg button").forEach(x => x.classList.toggle("on", x === b)); S.mode = b.dataset.mode; S.dirty = true;
-  });
+  $("#marks").onclick = e => { const t = e.target.dataset?.t; if (t) setT(+t - 0.5, true); };
+  document.querySelectorAll(".modes button").forEach(b => b.onclick = () => { document.querySelectorAll(".modes button").forEach(x => x.classList.toggle("on", x === b)); S.mode = b.dataset.mode; S.dirty = true; });
   $("#unc").onchange = e => { S.unc = e.target.checked; S.dirty = true; };
-  const setOff = v => { S.off = Math.max(-6, Math.min(6, v)); $("#offset").value = S.off; const txt = `${S.off > 0 ? "+" : ""}${S.off.toFixed(1)} s`; $("#offv").textContent = txt; $("#offv2").textContent = txt; S.dirty = true; };
+  const setOff = v => { S.off = Math.max(-6, Math.min(6, v)); $("#offv").textContent = `${S.off > 0 ? "+" : ""}${S.off.toFixed(1)} s`; S.dirty = true; };
   $("#nudgeM").onclick = () => setOff(S.off - 0.5); $("#nudgeP").onclick = () => setOff(S.off + 0.5);
-  $("#offset").oninput = e => { S.off = +e.target.value; setOff(+e.target.value); };
+  $("#vmin").onclick = () => { $("#vcard").classList.toggle("min"); $("#vmin").textContent = $("#vcard").classList.contains("min") ? "+" : "–"; };
+  $("#about").onclick = () => { $("#drawer").hidden = false; }; $("#dclose").onclick = () => { $("#drawer").hidden = true; };
+  $("#drawer").onclick = e => { if (e.target.id === "drawer") $("#drawer").hidden = true; };
   document.addEventListener("keydown", e => {
     if (e.target.tagName === "INPUT") return;
     if (e.code === "Space") { e.preventDefault(); $("#play").click(); }
-    if (e.key === "ArrowRight") setT(S.t + 2, true);
-    if (e.key === "ArrowLeft") setT(S.t - 2, true);
-    if (e.key === ",") $("#nudgeM").click();
-    if (e.key === ".") $("#nudgeP").click();
+    if (e.key === "ArrowRight") setT(S.t + 2, true); if (e.key === "ArrowLeft") setT(S.t - 2, true);
+    if (e.key === ",") $("#nudgeM").click(); if (e.key === ".") $("#nudgeP").click(); if (e.key === "Escape") $("#drawer").hidden = true;
   });
-  document.fonts?.ready.then(() => (S.dirty = true));
+  document.fonts?.ready.then(() => { lanes(); S.heatKey = ""; S.dirty = true; });
+  S.ready = true;
   requestAnimationFrame(loop);
 }
 init();

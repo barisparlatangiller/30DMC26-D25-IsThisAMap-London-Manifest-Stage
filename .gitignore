@@ -1,2 +1,4 @@
 __pycache__/
 logs/
+media/
+node_modules/

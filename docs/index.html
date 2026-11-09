@@ -2,77 +2,74 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Is a Stage a Map? Manifest at Wembley</title>
-<meta name="description" content="#30DayMapChallenge 2026 · Day 25 · Is this a map? Six performers of Manifest, mapped on the OVO Arena Wembley stage in sync with the live video.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link href="style.css?v=7" rel="stylesheet">
+<meta name="description" content="#30DayMapChallenge 2026 · Day 25 · Is this a map? Six performers of Manifest, mapped live on the OVO Arena Wembley stage in sync with the concert video. The song draws its own map.">
+<meta name="theme-color" content="#0a0716">
+<link rel="preload" href="fonts/manrope-latin-800-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/manrope-latin-500-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link href="style.css?v=20" rel="stylesheet">
 </head>
 <body>
-<div class="app">
-  <section class="stagecol">
-    <div class="stagehead">
-      <div>
-        <div class="eb">#30DayMapChallenge · Day 25 · Is this a map?</div>
-        <h1>Is a stage a map?</h1>
-      </div>
-      <div class="clock"><span id="clock">0:29</span><small id="clockNote">press play</small></div>
-    </div>
-    <div class="stagebox">
-      <div class="dir top">Back of stage</div>
-      <canvas id="stage" aria-label="Stage plan with the performers' positions and the floor each of them covered"></canvas>
-      <div class="dir bot">Audience</div>
-      <div id="cap" class="cap"></div>
-    </div>
-  </section>
+<div class="haze" aria-hidden="true"><i></i><i></i><i></i></div>
+<canvas id="stage" aria-label="The stage seen from the audience: each performer's light, and the floor each of them has covered so far"></canvas>
 
-  <aside class="side">
-    <p class="sub">Manifest, <i>Intro &amp; Hileli</i>, live at OVO Arena Wembley, London. Six performers on 24 × 24 m of stage.
-      Each one colours the floor she covers, and over 4½ minutes the song draws its own map.</p>
+<header class="brand">
+  <div class="eb">#30DayMapChallenge <span>·</span> Day 25 <span>·</span> Is this a map?</div>
+  <h1>Is a stage <em>a map?</em></h1>
+  <p class="sub"><b>Manifest</b> · <i>Intro &amp; Hileli</i> · live at OVO Arena Wembley, London</p>
+</header>
 
-    <div class="video"><div id="yt"></div></div>
+<aside class="vcard" id="vcard">
+  <div class="vhead"><span class="live"><i></i>LIVE</span><span>OVO Arena Wembley</span><button id="vmin" class="ghost" title="Hide the video" aria-label="Hide the video">–</button></div>
+  <div class="video"><div id="yt"></div></div>
+  <div class="vnote" id="clockNote">Press play: the map follows the video.</div>
+</aside>
 
-    <div class="transport">
-      <button id="play" class="play" aria-label="Play">▶</button>
-      <input id="time" type="range" min="0" max="300" step="0.1" value="29" aria-label="Time in the song">
-      <span id="tlabel" class="mono">0:29</span>
-    </div>
-
-    <div class="nudge"><span>Map vs. video</span><button id="nudgeM" title="Map earlier (,)">−0.5 s</button><b id="offv2" class="mono">0.0 s</b><button id="nudgeP" title="Map later (.)">+0.5 s</button></div>
-
-    <div class="seg" role="group" aria-label="What the colours show">
-      <button data-mode="acc" class="on">Footprints</button>
-      <button data-mode="trail">Last 12 s</button>
-      <button data-mode="all">Whole song</button>
-    </div>
-
-    <ul id="people"></ul>
-
-    <h2>Moments</h2>
-    <ol id="moments"></ol>
-
-    <label class="tog"><input id="unc" type="checkbox" checked> Include uncertain moments (silhouettes, approximate positions)</label>
-
-    <details class="sync">
-      <summary>How this was made</summary>
-      <p>Every 2 seconds the position of each performer was read from the concert video (<b id="nObs"></b> direct
-        observations, the rest interpolated) and placed on an approximate stage plan: a 2.5 m platform at +3.3 m with stairs,
-        an 8 m main stage, a 7.5 m runway and an 18 m front block. Screen positions are not surveyed coordinates, so
-        every point is an estimate. The positions were noted on a clock that drifts against the published video (about 3 s at the start, 40 s near the end), so the map follows the video through six anchor moments checked by eye: the silhouettes appearing, the first step down, the last one off the stairs, the start of the run, the arrival at the front block and the end.</p>
-      <p>Colour: each sample counts for 2 seconds of presence, strongest where she stands and gone 3.2 m away. Footprints stay on the stage: the newest are brightest and settle to a lasting trace within about half a minute; a soft band follows the road she walked. Where
-        several performers share the floor, the colour of whoever spent more time there leads, so the colours don't wash
-        out to white. Clear sightings count fully, approximate ones 0.6 and silhouettes 0.4. Moments when she is out of
-        frame are left out and shown as a dashed ring.</p>
-      <label class="off">Video offset <input id="offset" type="range" min="-6" max="6" step="0.25" value="0">
-        <span id="offv" class="mono">0.00 s</span></label>
-      <p class="fine">Video: Manifest's official live performance on YouTube, shown with the YouTube player. All rights stay
-        with the artists and rights holders. Plan and positions: Barış Parlatangiller. Built with Claude.
-        <a href="https://github.com/barisparlatangiller/30DMC26-D25-IsThisAMap-London-Manifest-Stage" target="_blank" rel="noopener">Code &amp; method</a></p>
-    </details>
-  </aside>
+<div class="modes" role="group" aria-label="What the colours show">
+  <button data-mode="acc" class="on">Footprints</button><button data-mode="trail">Last 12 s</button><button data-mode="all">Whole song</button>
 </div>
-<script src="app.js?v=12"></script>
+
+<div class="lower3" id="cap" aria-live="polite"></div>
+
+<div class="cast" id="cast"></div>
+
+<footer class="dock">
+  <button id="play" class="play" aria-label="Play"><svg viewBox="0 0 24 24"><path id="playIcon" d="M8 5v14l11-7z"/></svg></button>
+  <div class="clock"><b id="clock">0:29</b><small>/ 4:56</small></div>
+  <div class="track" id="track">
+    <div class="marks" id="marks"></div>
+    <canvas id="lanes"></canvas>
+    <div class="head" id="head"></div>
+    <input id="time" type="range" min="20" max="300" step="0.05" value="29" aria-label="Time in the song">
+  </div>
+  <button id="about" class="ghost pill">How it's made</button>
+</footer>
+
+<div class="drawer" id="drawer" hidden>
+  <div class="dpanel">
+    <button id="dclose" class="ghost x" aria-label="Close">×</button>
+    <div class="eb">Method &amp; facts</div>
+    <h2>How the song became a map</h2>
+    <p>Every 2 seconds, the position of each performer was read from the concert video (<b id="nObs"></b> direct observations,
+      the rest interpolated) and placed on an approximate 24 × 24 m stage plan: a raised platform at +3.3 m with stairs, the main
+      stage, a 7.5 m runway and an 18 m front block. Between the 2 s samples the performers glide on a smooth curve.</p>
+    <p>Colour: every sample counts as 2 seconds of presence, strongest where she stands and gone 3.2 m away. Fresh footprints glow,
+      then settle to a lasting trace. Where several performers share the floor, whoever spent more time there keeps her colour.
+      Clear sightings count fully, approximate ones 0.6, silhouettes 0.4; moments when she is out of frame are left out and shown as a dashed ring.</p>
+    <div class="facts" id="facts"></div>
+    <h3>Sync with the video</h3>
+    <p>The positions were noted on a clock that drifts against the published video (about 3 s at the start, 40 s near the end), so the map follows
+      the video through six anchor moments checked by eye. If the map runs ahead or behind on your screen, nudge it:</p>
+    <div class="nudge"><button id="nudgeM" class="ghost pill">−0.5 s</button><b id="offv" class="mono">0.0 s</b><button id="nudgeP" class="ghost pill">+0.5 s</button>
+      <label class="tog"><input id="unc" type="checkbox" checked> include uncertain moments</label></div>
+    <p class="fine">Keys: space play/pause · ← → 2 s · , . nudge. Screen positions are estimates, not surveyed coordinates; the stage size is approximate.
+      Video: Manifest's official live performance, shown with the YouTube player; all rights stay with the artists and rights holders.
+      Plan and positions: Barış Parlatangiller. Built with Claude.
+      <a href="https://github.com/barisparlatangiller/30DMC26-D25-IsThisAMap-London-Manifest-Stage" target="_blank" rel="noopener">Code &amp; data</a> ·
+      <a href="https://barisparlatangiller.github.io/" target="_blank" rel="noopener">All 30 maps</a></p>
+  </div>
+</div>
+<script src="app.js?v=20"></script>
 </body>
 </html>

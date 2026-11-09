@@ -29,8 +29,14 @@ All layers are hand-drawn from the video by Barış Parlatangiller, in EPSG:2770
 `pipeline/prepare.py` turns the plan 90° clockwise so the back of the stage is north and the audience south. It is a
 rotation, not a mirror, so left and right stay as the camera sees them. It then writes `docs/data/stage.json`.
 
-The page draws the stage on a canvas. Positions run through a Catmull-Rom curve between the 2 s samples, and the
-YouTube player's clock drives the time.
+The page draws the stage in perspective, as seen from the audience: the floor (with the colour map) is projected row by row,
+the platform is lifted to +3.3 m with its stairs, and each performer is a spotlight with a pool of light, a glowing figure and
+her name. Positions run through a Catmull-Rom curve between the 2 s samples, and the YouTube player's clock drives the time;
+between the player's coarse time reports the page runs its own clock, so the motion stays smooth. The timeline shows the song as
+six lanes (bright where a performer was clearly seen), with the key moments on top. Fonts are self-hosted (Manrope, JetBrains Mono).
+
+`pipeline/video.mjs` renders the LinkedIn video (12 s, 1080 × 1350) and three stills from the page in video mode (`?video=1`,
+no player): `node pipeline/video.mjs` → `media/`.
 
 Heat: every sample counts for 2 s as a radial glow that fades to zero 3.2 m from the performer. Glows are weighted
 by certainty: clear 1.0, approximate 0.6, silhouette 0.4. "Not visible" samples are left out of the heat map.
