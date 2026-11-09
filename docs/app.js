@@ -319,11 +319,12 @@ function loop(now) {
   if (S.ytReady && S.yt.getPlayerState && S.yt.getPlayerState() === 1) {
     // the player reports its time in coarse steps: run our own clock between reports, re-anchor on real jumps
     const vt = S.yt.getCurrentTime(), rate = S.yt.getPlaybackRate ? S.yt.getPlaybackRate() : 1;
+    if (vt < T0 - 1 && S.t > T0 + 4) { frameUI(now); if (!VID) requestAnimationFrame(loop); return; }   // an ad (or the intro): hold the map
     if (vt !== S.rawVt || !S.anchor) { const pred = S.anchor ? S.anchor.vt + (now - S.anchor.pf) / 1000 * rate : vt;
       if (!S.anchor || Math.abs(pred - vt) > 0.25) S.anchor = { vt, pf: now }; else S.anchor = { vt: pred + (vt - pred) * 0.15, pf: now }; S.rawVt = vt; }
     S.t = S.anchor.vt + (now - S.anchor.pf) / 1000 * rate + S.off;
   } else if (S.ytReady && S.yt.getCurrentTime && !S.scrubbing) {
-    const vt = S.yt.getCurrentTime() + S.off; if (Math.abs(vt - S.t) > 0.3 && S.yt.getPlayerState() === 2) S.t = vt;   // paused: follow the player's position
+    const vt = S.yt.getCurrentTime() + S.off; if (Math.abs(vt - S.t) > 0.3 && S.yt.getPlayerState() === 2 && vt > T0 - 1) S.t = vt;   // paused: follow the player's position
     S.anchor = null;
   } else if (!S.ytReady && S.playing) { S.t += dt; if (S.t >= T1) { S.playing = false; playIcon(); } }
   frameUI(now);
