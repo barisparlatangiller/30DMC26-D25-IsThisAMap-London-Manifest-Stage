@@ -117,11 +117,11 @@ function edges(poly, h, col = 0xece2ff, op = 0.9) {
   return new THREE.Line(g, new THREE.LineBasicMaterial({ color: col, transparent: true, opacity: op }));
 }
 function labelSprite(name) {                  // the name written along the figure itself, read bottom to top
-  const k = 4, w = 14, h = 12 + name.length * 7.2, c = document.createElement("canvas"); c.width = w * k; c.height = h * k;
+  const k = 8, w = 14, h = 12 + name.length * 7.2, c = document.createElement("canvas"); c.width = w * k; c.height = h * k;
   const g = c.getContext("2d"); g.scale(k, k); g.translate(w / 2, h / 2); g.rotate(-Math.PI / 2);
   g.font = "800 10px Manrope, sans-serif"; g.textAlign = "center"; g.textBaseline = "middle";
-  g.lineWidth = 2.4; g.strokeStyle = "rgba(11,8,20,.75)"; g.strokeText(name, 0, 0.5); g.fillStyle = "#1a0f33"; g.fillText(name, 0, 0.5);
-  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+  g.fillStyle = "#120a26"; g.fillText(name, 0, 0.5);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; t.minFilter = THREE.LinearFilter; t.generateMipmaps = false;
   const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, depthWrite: false, depthTest: false }));
   const H = 1.05; sp.scale.set(H * w / h, H, 1); sp.renderOrder = 10; return sp;
 }
@@ -208,7 +208,7 @@ function buildScene() {
     const parts = Object.fromEntries(S.d.parts.map(p => [p.id, p])), mh = 0, pH = parts.platform.h - BASE;
     const side = [1.2, 2.6, 4.0, 5.4, 18.6, 20.0, 21.4, 22.8].map((x, i) => [x, 6.6 + (i % 2) * 0.5, mh]);
     const top = [7.2, 9.1, 11.0, 12.9, 14.8, 16.7].map((x, i) => [x, 1.3 + (i % 2) * 0.4, pH]);
-    G.crew = { mat, groups: [[69, 80, side], [124.5, 131, top], [184, 193.5, top]].map(([a, b, pts]) => {
+    G.crew = { mat, groups: [[69, 80, side], [124.5, 131, top], [163, 167, top], [179.5, 193.5, top]].map(([a, b, pts]) => {
       const g = new THREE.Group(); for (const [x, y, h] of pts) { const m = new THREE.Mesh(new THREE.CapsuleGeometry(0.17, 0.95, 4, 10), mat); m.position.copy(W3(x, y, h + 0.65)); g.add(m); }
       g.visible = false; scene.add(g); return { a, b, g }; }) }; }
   // walked paths, thin lines on the stage
@@ -346,7 +346,7 @@ function loop(now) {
 window.renderAt = (t, cam) => { S.t = t; if (cam) { G.fly = null; G.ctl.autoRotate = false; G.cam.position.set(...cam.p); G.ctl.target.set(...cam.t); } frameUI(t * 1000); };
 
 async function init() {
-  S.d = await fetch("data/stage.json?v=12").then(r => r.json());
+  S.d = await fetch("data/stage.json?v=13").then(r => r.json());
   S.on = new Set(S.d.members.map(m => m.key));
   $("#nObs").textContent = S.d.kinds.gozlem;
   S.PATH = {}; for (const m of S.d.members) { S.PATH[m.key] = []; for (let t = S.d.t0; t <= S.d.t1 + 0.01; t += 0.25) { const p = pos(m, t); S.PATH[m.key].push([t, p.x, p.y, p.z]); } }

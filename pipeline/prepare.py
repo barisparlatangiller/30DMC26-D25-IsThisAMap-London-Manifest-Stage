@@ -17,7 +17,7 @@ import numpy as np
 import shapely
 
 # data clock → video clock (see the note further down)
-WARP_ = [[26, 27.5], [56, 56.5], [72, 69.5], [156, 151.5], [163, 157.5], [168, 164.5], [214, 213], [216, 232], [220, 261.5], [230, 269.5], [290, 294]]
+WARP_ = [[26, 27.5], [56, 56.5], [72, 69.5], [156, 151.5], [163, 157.5], [168, 164.5], [214, 213], [220, 222.5], [226, 228.5], [290, 294]]
 
 D, OUT = Path("data"), Path("docs/data")
 WHO = {  # dress colour in the source data → member, pastel colour
@@ -99,6 +99,17 @@ for m in members:
         if r[6] == "ana_sahne_on" and r[0] >= 70:
             r[2] = round(min(r[2] + 1.5, 7.6), 2)
 
+# 2b) the camera moves all the time, the six much less: small shifts in the notes (under 0.8 m) are mostly the camera, not
+#     the performers. Each one holds her place until she really moves (more than 0.8 m) or changes part of the stage.
+HOLD = 0.8
+for m in members:
+    hx = hy = hz = None
+    for r in m["s"]:
+        if hz != r[6] or abs(r[1] - hx) > HOLD or abs(r[2] - hy) > HOLD:
+            hx, hy, hz = r[1], r[2], r[6]
+        else:
+            r[1], r[2] = hx, hy
+
 # 3) front/back: the data put all six on one line. Read again from the video (9 Nov, every 2.5 s, wide shots only): who stands
 #    behind whom, as metres toward the back, by rank from the audience's left. Between readings the offset is interpolated.
 #    Video seconds; the WARP below is applied to find the data time of each sample.
@@ -126,9 +137,11 @@ for k in range(len(members[0]["s"])):
         if r[6] in ("ana_sahne_on", "on_blok", "runway") and off[j]:
             r[2] = round(r[2] + off[j], 2)
 
-# 4) two moments where the video shows the two dark-haired performers somewhere else than the notes: at 3:01 Hilal is up on the
+# 4) moments where the video shows the order differently (checked second by second): Hilal stays on the left until 1:28
+#    and crosses during the crowd shots, Zeynep is still the leftmost at 2:14. And two moments where the video shows the two dark-haired performers somewhere else than the notes: at 3:01 Hilal is up on the
 #    bottom steps and Zeynep walks off to the right edge, at the back; at 3:09 Zeynep dances hidden right behind the line.
-NAMED = [(180.0, 183.5, "Hilal", None, -2.6), (180.0, 183.5, "Zeynep Oktay", 14.6, -2.0),
+NAMED = [(83.0, 88.5, "Hilal", 8.8, None), (83.0, 88.5, "Zeynep Oktay", 9.9, None), (132.0, 135.6, "Zeynep Oktay", 9.4, None),
+         (180.0, 183.5, "Hilal", None, -2.6), (180.0, 183.5, "Zeynep Oktay", 14.6, -2.0),
          (187.5, 191.5, "Zeynep Oktay", 12.9, -1.8), (187.5, 191.5, "Hilal", 11.3, None)]
 for va, vb, nm, nx, dy in NAMED:
     m = byname[nm]
