@@ -110,6 +110,19 @@ for m in members:
         else:
             r[1], r[2] = hx, hy
 
+# 2c) left-to-right order read from the video where the notes have it differently (letters: first letter of each name, seen
+#     from the audience). Inside each window the six keep the positions of the notes, but who stands where follows the video.
+ORDER = [(140.8, 150.5, "ESZLHM")]
+_wa0 = np.array(WARP_, dtype=float)
+_ini = {m["name"][0]: m for m in members}
+for va, vb, seq in ORDER:
+    for k in range(len(members[0]["s"])):
+        vt = float(np.interp(members[0]["s"][k][0], _wa0[:, 0], _wa0[:, 1]))
+        if not (va <= vt <= vb): continue
+        xs = sorted(m["s"][k][1] for m in members)
+        for x, ch in zip(xs, seq):
+            _ini[ch]["s"][k][1] = x
+
 # 3) front/back: the data put all six on one line. Read again from the video (9 Nov, every 2.5 s, wide shots only): who stands
 #    behind whom, as metres toward the back, by rank from the audience's left. Between readings the offset is interpolated.
 #    Video seconds; the WARP below is applied to find the data time of each sample.
@@ -142,7 +155,7 @@ for k in range(len(members[0]["s"])):
 #    and crosses during the crowd shots, Zeynep is still the leftmost at 2:14. And two moments where the video shows the two dark-haired performers somewhere else than the notes: at 3:01 Hilal is up on the
 #    bottom steps and Zeynep walks off to the right edge, at the back; at 3:09 Zeynep dances hidden right behind the line.
 NAMED = [(69.0, 77.5, "Hilal", None, 0.8), (74.5, 77.5, "Hilal", 12.2, None), (74.5, 77.5, "Esin", 9.6, None),
-         (83.0, 88.5, "Hilal", 8.8, None), (83.0, 88.5, "Zeynep Oktay", 9.9, None), (132.0, 135.6, "Zeynep Oktay", 9.4, None),
+         (83.0, 88.5, "Hilal", 8.8, None), (83.0, 88.5, "Zeynep Oktay", 9.9, None), (132.0, 135.6, "Zeynep Oktay", 9.4, None), (133.5, 135.6, "Hilal", 14.6, None), (136.4, 140.6, "Hilal", 11.9, None),
          (180.0, 183.5, "Hilal", None, -2.6), (180.0, 183.5, "Zeynep Oktay", 14.6, -2.0),
          (187.5, 191.5, "Zeynep Oktay", 12.9, -1.8), (187.5, 191.5, "Hilal", 11.3, None)]
 for va, vb, nm, nx, dy in NAMED:
