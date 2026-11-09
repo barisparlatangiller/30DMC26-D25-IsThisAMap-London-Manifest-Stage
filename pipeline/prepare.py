@@ -79,20 +79,18 @@ for kiz, (name, col) in WHO.items():
                     "obs": int((p.veri_turu == "gozlem").sum())})
 
 # corrections from the video (checked with Barış, 9 Nov):
-# 1) on the platform the line is, left to right from the audience, Mina, Sueda, Zeynep, Hilal, Esin, Lidya
-#    (Esin and Lidya on the right, not the left); from 0:56 to 1:04 (data) they blend into the recorded stair positions
+# 1) at the start, on the platform, Esin and Lidya stand in each other's place; from 0:56 to 1:00 (data) they slip back
+#    into their recorded positions, and everything after that is as recorded
 # 2) after the stairs the six stand at the front edge of the main stage, not at the foot of the stairs: main-stage
 #    positions move 1.5 m toward the audience (at most to 7.6 m, the stage edge is at 8 m)
-ORDER0 = ["Mina", "Sueda", "Zeynep Oktay", "Hilal", "Esin", "Lidya"]
 byname = {m["name"]: m for m in members}
-for k in range(len(members[0]["s"])):
-    t = members[0]["s"][k][0]
-    if t > 64: break
-    xs = sorted(m["s"][k][1] for m in members)
-    f = 1.0 if t <= 56 else max(0.0, 1 - (t - 56) / 8)
-    for slot, nm in enumerate(ORDER0):
-        r = byname[nm]["s"][k]
-        r[1] = round(f * xs[slot] + (1 - f) * r[1], 2)
+E, L = byname["Esin"]["s"], byname["Lidya"]["s"]
+for k in range(len(E)):
+    t = E[k][0]
+    if t >= 60: break
+    f = 1.0 if t <= 56 else (60 - t) / 4
+    ex, lx = E[k][1], L[k][1]
+    E[k][1], L[k][1] = round(f * lx + (1 - f) * ex, 2), round(f * ex + (1 - f) * lx, 2)
 for m in members:
     for r in m["s"]:
         if r[6] == "ana_sahne_on" and r[0] >= 70:

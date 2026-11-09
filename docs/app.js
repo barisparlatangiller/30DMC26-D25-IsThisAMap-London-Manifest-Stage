@@ -81,6 +81,9 @@ function paintHeat() {     // the performer with more presence leads (weights³)
   hx.putImageData(IMG, 0, 0);
   // the floor texture: soft colour, only on the stage (a faint grid underneath)
   tx.clearRect(0, 0, htex.width, htex.height);
+  tx.lineWidth = 1;                                        // a very light 1 m grid, just enough to read distances
+  for (let x = 0; x <= S.d.w; x++) { tx.strokeStyle = x % 4 ? "rgba(220,205,255,.018)" : "rgba(220,205,255,.032)"; tx.beginPath(); tx.moveTo(x * HPX + 0.5, 0); tx.lineTo(x * HPX + 0.5, htex.height); tx.stroke(); }
+  for (let y = 0; y <= S.d.h; y++) { tx.strokeStyle = y % 4 ? "rgba(220,205,255,.018)" : "rgba(220,205,255,.032)"; tx.beginPath(); tx.moveTo(0, y * HPX + 0.5); tx.lineTo(htex.width, y * HPX + 0.5); tx.stroke(); }
   tx.imageSmoothingEnabled = true; tx.filter = "blur(2px)"; tx.drawImage(heat, 0, 0, htex.width, htex.height); tx.filter = "none";
   tx.globalAlpha = 0.6; tx.drawImage(heat, 0, 0, htex.width, htex.height); tx.globalAlpha = 1;
   tx.globalCompositeOperation = "destination-in"; tx.fillStyle = "#fff";
