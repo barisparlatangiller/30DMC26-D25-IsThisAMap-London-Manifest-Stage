@@ -110,10 +110,10 @@ for p in parts:
 
 
 # data clock → video clock. Re-checked frame by frame against the official video (9 Nov) and with Barış: silhouettes on the
-# platform, first steps onto the stairs (0:58), all six on the main stage (1:11), the wide line and solo at 2:31–2:42,
-# regrouping (2:44), the move to the front from 3:49, arrival at the front block (3:57), the end of the song (4:53).
-# All anchors sit 1.5 s earlier than the first check: the map ran that much behind the video.
-WARP = [[26, 27.5], [56, 56.5], [72, 69.5], [156, 151.5], [163, 157.5], [168, 164.5], [220, 228.5], [230, 236.5], [290, 293.5]]
+# platform, first steps onto the stairs (0:56), all six on the main stage (1:10), the wide line and solo at 2:31–2:44,
+# regrouping (2:44), the six at the front edge of the main stage under the big screen (3:52–4:20), the run over the
+# runway (4:20–4:28), the front block until the end of the song (4:54). Anchors sit 1.5 s earlier than the first check.
+WARP = [[26, 27.5], [56, 56.5], [72, 69.5], [156, 151.5], [163, 157.5], [168, 164.5], [214, 213], [216, 232], [220, 261.5], [230, 269.5], [290, 294]]
 
 
 def vw(t):

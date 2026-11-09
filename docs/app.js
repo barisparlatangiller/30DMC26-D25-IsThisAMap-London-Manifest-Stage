@@ -116,14 +116,14 @@ function edges(poly, h, col = 0xece2ff, op = 0.9) {
   const pts = poly.map(([x, y]) => W3(x, y, h + 0.02)); const g = new THREE.BufferGeometry().setFromPoints(pts);
   return new THREE.Line(g, new THREE.LineBasicMaterial({ color: col, transparent: true, opacity: op }));
 }
-function labelSprite(name, color) {           // the name stands upright above her, read bottom to top
-  const c = document.createElement("canvas"), k = 4, w = 34 * k, h = 30 + name.length * 13; c.width = w; c.height = h * k;
-  const g = c.getContext("2d"); g.scale(k, k);
-  g.fillStyle = color; g.beginPath(); g.roundRect(2, 2, w / k - 4, h - 4, (w / k - 4) / 2); g.fill();
-  g.translate(w / k / 2, h / 2); g.rotate(-Math.PI / 2); g.fillStyle = "#160e2c"; g.font = "800 17px Manrope, sans-serif"; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(name, 0, 1);
+function labelSprite(name) {                  // the name written along the figure itself, read bottom to top
+  const k = 4, w = 14, h = 12 + name.length * 7.2, c = document.createElement("canvas"); c.width = w * k; c.height = h * k;
+  const g = c.getContext("2d"); g.scale(k, k); g.translate(w / 2, h / 2); g.rotate(-Math.PI / 2);
+  g.font = "800 10px Manrope, sans-serif"; g.textAlign = "center"; g.textBaseline = "middle";
+  g.lineWidth = 2.4; g.strokeStyle = "rgba(255,255,255,.55)"; g.strokeText(name, 0, 0.5); g.fillStyle = "#1a0f33"; g.fillText(name, 0, 0.5);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
   const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, depthWrite: false, depthTest: false }));
-  sp.scale.set(0.62 * (w / k) / 34, 0.62 * h / 34, 1); sp.center.set(0.5, 0); sp.renderOrder = 10; return sp;
+  const H = 1.05; sp.scale.set(H * w / h, H, 1); sp.renderOrder = 10; return sp;
 }
 function glowTex(inner = 1) {
   const c = document.createElement("canvas"); c.width = c.height = 128; const g = c.getContext("2d"), gr = g.createRadialGradient(64, 64, 0, 64, 64, 64);
@@ -162,12 +162,12 @@ function buildScene() {
     const e = new THREE.LineSegments(new THREE.EdgesGeometry(g), edgeMat); e.position.copy(m.position); scene.add(e); }
   // backdrop: a lilac arch screen behind the platform, as on the night, with the band's name (set in our own type, not their logo)
   { const c = document.createElement("canvas"); c.width = 2048; c.height = 900; const g = c.getContext("2d");
-    const gr = g.createRadialGradient(1024, 900, 80, 1024, 900, 980); gr.addColorStop(0, "#f1e4fb"); gr.addColorStop(0.55, "#d9c3f2"); gr.addColorStop(0.9, "rgba(185,150,230,.55)"); gr.addColorStop(1, "rgba(185,150,230,0)");
+    const gr = g.createRadialGradient(1024, 900, 80, 1024, 900, 980); gr.addColorStop(0, "#6a4fa3"); gr.addColorStop(0.55, "#4f3784"); gr.addColorStop(0.9, "rgba(60,40,110,.6)"); gr.addColorStop(1, "rgba(185,150,230,0)");
     g.fillStyle = gr; g.beginPath(); g.ellipse(1024, 900, 900, 860, 0, Math.PI, 2 * Math.PI); g.fill();
-    g.font = "800 190px Manrope, sans-serif"; g.textAlign = "center"; g.letterSpacing = "38px"; g.fillStyle = "rgba(40,22,70,.82)"; g.fillText("MANIFEST", 1044, 470);
-    g.letterSpacing = "0px"; g.strokeStyle = "rgba(40,22,70,.5)"; g.lineWidth = 6; g.beginPath(); g.moveTo(560, 520); g.quadraticCurveTo(1024, 560, 1490, 515); g.stroke();
+    g.font = "800 190px Manrope, sans-serif"; g.textAlign = "center"; g.letterSpacing = "38px"; g.shadowColor = "rgba(255,255,255,.6)"; g.shadowBlur = 30; g.fillStyle = "#ffffff"; g.fillText("MANIFEST", 1044, 470); g.shadowBlur = 0;
+    g.letterSpacing = "0px"; g.strokeStyle = "rgba(255,255,255,.55)"; g.lineWidth = 6; g.beginPath(); g.moveTo(560, 520); g.quadraticCurveTo(1024, 560, 1490, 515); g.stroke();
     const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; G.backTex = t; G.backCanvas = c;
-    const bd = new THREE.Mesh(new THREE.PlaneGeometry(22, 22 * 900 / 2048), new THREE.MeshBasicMaterial({ map: t, color: 0x6f5f8c, transparent: true, opacity: 0.85, fog: false, depthWrite: false }));
+    const bd = new THREE.Mesh(new THREE.PlaneGeometry(22, 22 * 900 / 2048), new THREE.MeshBasicMaterial({ map: t, color: 0xb8b0c8, transparent: true, opacity: 0.9, fog: false, depthWrite: false }));
     bd.position.set(0, ph + 22 * 900 / 2048 / 2 - 0.2, -S.d.h / 2 - 0.6); bd.renderOrder = -1; scene.add(bd); G.backdrop = bd; }
   // the colour map, on the stage and on the platform
   G.floorTex = new THREE.CanvasTexture(htex); G.floorTex.colorSpace = THREE.SRGBColorSpace;
@@ -199,7 +199,7 @@ function buildScene() {
     beam.position.y = 5; grp.add(beam);
     const ring = new THREE.Mesh(new THREE.RingGeometry(0.62, 0.7, 40), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.9, side: THREE.DoubleSide }));
     ring.rotation.x = -Math.PI / 2; ring.position.y = 0.04; grp.add(ring);
-    const lbl = labelSprite(m.name.split(" ")[0], m.color); lbl.position.y = 2.05; grp.add(lbl);
+    const lbl = labelSprite(m.name.split(" ")[0]); lbl.position.y = 0.74; grp.add(lbl);
     scene.add(grp); G.p[m.key] = { grp, body, head, pool, beam, ring, lbl };
   }
   // walked paths, thin lines on the stage
@@ -254,16 +254,6 @@ function update(now) {
     P.body.visible = P.head.visible = full || true;
     let n = 0; const arr = S.PATH[m.key]; while (n < arr.length && arr[n][0] <= tEnd) n++; G.paths[m.key].geometry.setDrawRange(0, n);
   }
-  // spread the upright names a little where two would overlap on screen
-  const L = S.d.members.filter(m => S.on.has(m.key)).map(m => { const P = G.p[m.key]; const v = P.grp.position.clone(); v.y += 2.1; v.project(G.cam); return { P, x: v.x, y: v.y, dx: 0 }; });
-  const minDx = 0.062 * (G.el.clientHeight / G.el.clientWidth) * 1.4;
-  // keep the left-to-right order: sweep sorted by screen x, then re-centre each pushed cluster on its own centre
-  L.sort((a, b) => a.x - b.x); const nx = L.map(o => o.x);
-  for (let i = 1; i < L.length; i++) if (Math.abs(L[i].y - L[i - 1].y) < 0.25 && nx[i] < nx[i - 1] + minDx) nx[i] = nx[i - 1] + minDx;
-  for (let i = 0; i < L.length;) { let j = i; while (j + 1 < L.length && nx[j + 1] - nx[j] <= minDx + 1e-9 && Math.abs(L[j + 1].y - L[j].y) < 0.25) j++;
-    let sh = 0; for (let k = i; k <= j; k++) sh += L[k].x - nx[k]; sh /= (j - i + 1); for (let k = i; k <= j; k++) L[k].dx = nx[k] + sh - L[k].x; i = j + 1; }
-  for (const o of L) { const tgt = o.dx * G.cam.position.distanceTo(o.P.grp.position) * 0.55; o.P.lx = o.P.lx == null || VID ? tgt : o.P.lx + (tgt - o.P.lx) * 0.2;
-    const right = new THREE.Vector3().setFromMatrixColumn(G.cam.matrixWorld, 0); o.P.lbl.position.set(right.x * o.P.lx, 2.05, right.z * o.P.lx); }
   // phone lights twinkle
   G.crowd.material.opacity = 0.55 + 0.15 * Math.sin((VID ? S.t * 1000 : now) / 700);
 }
@@ -345,7 +335,7 @@ function loop(now) {
 window.renderAt = (t, cam) => { S.t = t; if (cam) { G.fly = null; G.ctl.autoRotate = false; G.cam.position.set(...cam.p); G.ctl.target.set(...cam.t); } frameUI(t * 1000); };
 
 async function init() {
-  S.d = await fetch("data/stage.json?v=9").then(r => r.json());
+  S.d = await fetch("data/stage.json?v=10").then(r => r.json());
   S.on = new Set(S.d.members.map(m => m.key));
   $("#nObs").textContent = S.d.kinds.gozlem;
   S.PATH = {}; for (const m of S.d.members) { S.PATH[m.key] = []; for (let t = S.d.t0; t <= S.d.t1 + 0.01; t += 0.25) { const p = pos(m, t); S.PATH[m.key].push([t, p.x, p.y, p.z]); } }
@@ -373,7 +363,7 @@ async function init() {
     if (e.key === "ArrowRight") setT(S.t + 2, true); if (e.key === "ArrowLeft") setT(S.t - 2, true);
     if (e.key === ",") $("#nudgeM").click(); if (e.key === ".") $("#nudgeP").click(); if (e.key === "Escape") $("#drawer").hidden = true;
   });
-  document.fonts?.ready.then(() => { for (const m of S.d.members) { const P = G.p[m.key], o = P.lbl; P.grp.remove(o); P.lbl = labelSprite(m.name.split(" ")[0], m.color); P.lbl.position.copy(o.position); P.grp.add(P.lbl); } lanes(); });
+  document.fonts?.ready.then(() => { for (const m of S.d.members) { const P = G.p[m.key], o = P.lbl; P.grp.remove(o); P.lbl = labelSprite(m.name.split(" ")[0]); P.lbl.position.copy(o.position); P.grp.add(P.lbl); } lanes(); });
   S.ready = true;
   if (VID) frameUI(0); else requestAnimationFrame(loop);
 }
