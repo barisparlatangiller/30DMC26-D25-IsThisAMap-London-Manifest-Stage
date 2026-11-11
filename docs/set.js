@@ -17,46 +17,43 @@ const LOOK = {
 };
 export function lookOf(name) { return LOOK[name.split(" ")[0]] || LOOK.Lidya; }
 
+// One smooth silhouette per performer (a turned profile, like a statuette), lit by a rim of her colour.
+// Costume zones follow the height: boots, skirt, top, skin, hair. No limbs to wave: she sways, she does not flail.
+const PROF = [[0, 0], [0.085, 0], [0.09, 0.06], [0.075, 0.36], [0.085, 0.5], [0.1, 0.64], [0.15, 0.74], [0.25, 0.8], [0.27, 0.83], [0.21, 0.88],
+  [0.135, 0.99], [0.128, 1.04], [0.15, 1.13], [0.175, 1.24], [0.19, 1.3], [0.165, 1.36], [0.06, 1.41], [0.052, 1.45], [0.085, 1.49], [0.1, 1.55],
+  [0.098, 1.61], [0.07, 1.67], [0.03, 1.7], [0, 1.705]];
+const VS = `varying vec3 vN; varying vec3 vV; varying float vY;
+  void main(){ vec4 wp = modelMatrix*vec4(position,1.); vY = position.y; vN = normalize(normalMatrix*normal);
+    vec4 mv = viewMatrix*wp; vV = normalize(-mv.xyz); gl_Position = projectionMatrix*mv; }`;
+const FS = `uniform vec3 uBoot, uSkirt, uTop, uSkin, uAcc; uniform float uOp, uHair; varying vec3 vN; varying vec3 vV; varying float vY;
+  void main(){
+    vec3 c = uHair > .5 ? uTop : (vY < .74 ? uBoot : vY < .985 ? uSkirt : vY < 1.405 ? uTop : uSkin);
+    if (uHair < .5 && vY < .5 && vY > .44) c = uSkin;                          // a sliver of knee above the boots
+    float lam = .55 + .45*max(dot(vN, normalize(vec3(.3,.8,.6))), 0.);       // soft key light from the front-top
+    float fr = pow(1. - max(dot(vN, vV), 0.), 2.4);                            // rim in her colour
+    vec3 col = c*lam*.95 + uAcc*fr*1.35 + vec3(1.)*pow(fr, 6.)*.25;
+    gl_FragColor = vec4(col, uOp); }`;
+const hex = h => new THREE.Color(h);
 export function makeFigure(name, accent) {
-  const L = lookOf(name), mats = [], acc = new THREE.Color(accent);
-  const M = (c, rough = 0.62, em = 0.1) => { const m = new THREE.MeshStandardMaterial({ color: c, roughness: rough, metalness: 0.02, emissive: acc, emissiveIntensity: em }); mats.push(m); return m; };
-  const skin = M(L.skin, 0.55, 0.06), hair = M(L.hair, 0.45, 0.04), top = M(L.top), skirt = M(L.skirt, 0.75), boot = M(0xeeeae4, 0.35, 0.05), jac = L.jacket ? M(L.jacket, 0.7) : null;
+  const L = lookOf(name), acc = new THREE.Color(accent), mats = [];
+  const mk = (hair) => { const m = new THREE.ShaderMaterial({ vertexShader: VS, fragmentShader: FS, transparent: false,
+    uniforms: { uBoot: { value: hex(0xeeeae4) }, uSkirt: { value: hex(L.skirt) }, uTop: { value: hex(hair ? L.hair : L.top) }, uSkin: { value: hex(L.skin) },
+      uAcc: { value: acc }, uOp: { value: 1 }, uHair: { value: hair ? 1 : 0 } } }); mats.push(m); return m; };
   const g = new THREE.Group(), root = new THREE.Group(); g.add(root);
-  const cap = (r, l, m) => new THREE.Mesh(new THREE.CapsuleGeometry(r, l, 4, 12), m);
-  // legs: thigh in skin, knee-high boots
-  const legs = [-1, 1].map(sx => { const leg = new THREE.Group(); leg.position.set(0.085 * sx, 0.8, 0);
-    const th = cap(0.062, 0.36, skin); th.position.y = -0.2; leg.add(th); const bt = cap(0.068, 0.36, boot); bt.position.y = -0.58; leg.add(bt);
-    root.add(leg); return leg; });
-  // tattered skirt: an open cone with a ragged hem
-  { const geo = new THREE.CylinderGeometry(0.15, 0.3, 0.32, 18, 3, true), p = geo.attributes.position;
-    for (let i = 0; i < p.count; i++) if (p.getY(i) < -0.1) p.setY(i, p.getY(i) - rnd() * 0.12);
-    geo.computeVertexNormals(); const sk = new THREE.Mesh(geo, skirt); sk.material.side = THREE.DoubleSide; sk.position.y = 0.86; root.add(sk); }
-  // torso (corset / top), a band of skin at the waist for the bikini top
-  const torso = cap(0.13, 0.3, top); torso.position.y = 1.16; torso.scale.set(1, 1, 0.78); root.add(torso);
-  // arms (jacket sleeves where they wear one)
-  const arms = [-1, 1].map(sx => { const arm = new THREE.Group(); arm.position.set(0.17 * sx, 1.34, 0);
-    const up = cap(0.05, 0.26, jac || skin); up.position.y = -0.17; arm.add(up); const lo = cap(0.042, 0.24, skin); lo.position.y = -0.45; arm.add(lo);
-    if (jac) { const puff = new THREE.Mesh(new THREE.SphereGeometry(0.085, 10, 8), jac); puff.position.y = -0.03; arm.add(puff); }
-    arm.rotation.z = 0.18 * sx; root.add(arm); return arm; });
-  // head and hair (long, a bit wild; curlier where it is curly)
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.105, 18, 14), skin); head.position.y = 1.55; head.scale.set(0.92, 1.08, 0.98); root.add(head);
-  const hairM = new THREE.Mesh(new THREE.SphereGeometry(0.125, 18, 14, 0, Math.PI * 2, 0, Math.PI * 0.62), hair); hairM.position.y = 1.57; hairM.scale.set(L.curls, 1.05, L.curls); root.add(hairM);
-  const back = new THREE.Mesh(new THREE.CylinderGeometry(0.11 * L.curls, 0.16 * L.curls, 0.42, 14, 1, true, Math.PI * 0.15, Math.PI * 1.7), hair);
-  back.material.side = THREE.DoubleSide; back.position.set(0, 1.38, -0.03); back.rotation.y = Math.PI; root.add(back);
-  if (L.streak) { const s = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.05, 0.38, 6), new THREE.MeshStandardMaterial({ color: L.streak, emissive: L.streak, emissiveIntensity: 0.5 })); mats.push(s.material);
-    s.position.set(0.1, 1.4, 0.02); root.add(s); const s2 = s.clone(); s2.position.x = -0.1; root.add(s2); }
-  return { g, root, legs, arms, torso, head, mats, txt: L.txt };
+  const geo = new THREE.LatheGeometry(PROF.map(([r, y]) => new THREE.Vector2(r, y)), 40); geo.scale(1, 1, 0.74);
+  const body = new THREE.Mesh(geo, mk(false)); root.add(body);
+  // hair: a cap and a long fall down the back (wider for the curly heads)
+  const hm = mk(true), cu = L.curls;
+  const cap = new THREE.Mesh(new THREE.SphereGeometry(0.112, 24, 16, 0, Math.PI * 2, 0, Math.PI * 0.58), hm); cap.position.y = 1.585; cap.scale.set(cu, 1.06, cu * 0.95); root.add(cap);
+  const fallG = new THREE.LatheGeometry([[0.1, 0], [0.12 * cu, 0.12], [0.135 * cu, 0.3], [0.12 * cu, 0.42], [0.085, 0.5]].map(([r, y]) => new THREE.Vector2(r, y)), 28, Math.PI * 0.55, Math.PI * 0.9);
+  const fall = new THREE.Mesh(fallG, hm); fall.position.y = 1.1 + (cu > 1.2 ? 0 : 0.05); fall.rotation.y = Math.PI * 0.72 + Math.PI; hm.side = THREE.DoubleSide; root.add(fall);
+  return { g, root, mats, txt: L.txt };
 }
-
-// a dance that is not choreography, only life: weight shifts, arms, a bob on the beat
-export function poseFigure(F, t, i, still) {
-  const b = (t * 2.05 + i * 0.37) * Math.PI * 2, a = still ? 0.35 : 1;
-  F.root.position.y = 0.025 * Math.abs(Math.sin(b / 2)) * a;
-  F.root.rotation.y = 0.18 * Math.sin(b / 4 + i) * a;
-  F.root.rotation.z = 0.04 * Math.sin(b / 2) * a;
-  F.legs[0].rotation.x = 0.12 * Math.sin(b / 2) * a; F.legs[1].rotation.x = -0.12 * Math.sin(b / 2) * a;
-  F.arms[0].rotation.z = -0.25 - 0.55 * (0.5 + 0.5 * Math.sin(b / 2 + i)) * a; F.arms[1].rotation.z = 0.25 + 0.55 * (0.5 + 0.5 * Math.sin(b / 2 + i + 1.3)) * a;
-  F.arms[0].rotation.x = -0.3 * Math.sin(b / 4 + i) * a; F.arms[1].rotation.x = 0.3 * Math.sin(b / 4 + i + 0.7) * a;
+// a sway on the beat, nothing more
+export function poseFigure(F, t, i) {
+  const b = (t * 2.05 + i * 0.37) * Math.PI * 2;
+  F.root.rotation.y = 0.12 * Math.sin(b / 4 + i); F.root.rotation.z = 0.025 * Math.sin(b / 2); F.root.position.y = 0.012 * Math.abs(Math.sin(b / 2));
+  for (const m of F.mats) { m.uniforms.uOp.value = m.opacity; }
 }
 
 // ── LED wall: a red kaleidoscope, like the visuals on the night ──

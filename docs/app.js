@@ -7,7 +7,7 @@ import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
-import { buildSet, updateSet, makeFigure, poseFigure } from "./set.js?v=2";
+import { buildSet, updateSet, makeFigure, poseFigure } from "./set.js?v=3";
 
 const ZN = { platform: "Platform", merdiven: "Stairs", ana_sahne_on: "Main stage", runway: "Runway", on_blok: "Front block" };
 const CELL = 0.2, R = 3.2, TRAIL = 12, TAU = 18, FLOOR = 0.45, HPX = 10;     // heat cell (m), glow radius (m), heat texture px per m
@@ -268,6 +268,88 @@ function update(now) {
   G.crowd.material.opacity = 0.55 + 0.15 * Math.sin((VID ? S.t * 1000 : now) / 700);
 }
 function render(now) { stepFly(now); G.ctl.update(); update(now); G.comp.render(); drawPlan(); }
+// ── analysis: who owns which part of the stage (hex territory, formation timeline, one card each) ──
+const SECT = [["Platform", s => s[6] === "platform"], ["Stairs", s => s[6] === "merdiven"],
+  ["Main · left", s => s[6].startsWith("ana") && s[1] < 8], ["Main · centre", s => s[6].startsWith("ana") && s[1] >= 8 && s[1] <= 16], ["Main · right", s => s[6].startsWith("ana") && s[1] > 16],
+  ["Runway", s => s[6] === "runway"], ["Front · left", s => s[6] === "on_blok" && s[1] < 9], ["Front · centre", s => s[6] === "on_blok" && s[1] >= 9 && s[1] <= 15], ["Front · right", s => s[6] === "on_blok" && s[1] > 15]];
+const short = m => m.name.split(" ")[0], rgbA = (c, a) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
+function hiDPI(c, w, h) { const d = Math.min(2, window.devicePixelRatio || 1) * 1.5; c.width = w * d; c.height = h * d; const g = c.getContext("2d"); g.scale(d, d); return g; }
+function stageOutline(g, sc, ox, oy, a = 0.45) {
+  g.save(); g.strokeStyle = `rgba(236,226,255,${a})`; g.lineWidth = 1; g.setLineDash([]);
+  for (const p of S.d.parts) { g.beginPath(); p.poly.forEach(([x, y], i) => i ? g.lineTo(ox + x * sc, oy + y * sc) : g.moveTo(ox + x * sc, oy + y * sc)); g.closePath(); g.stroke(); }
+  g.restore();
+}
+function hexPath(g, x, y, r) { g.beginPath(); for (let k = 0; k < 6; k++) { const a = Math.PI / 6 + k * Math.PI / 3; g.lineTo(x + r * Math.cos(a), y + r * Math.sin(a)); } g.closePath(); }
+function analysis() {
+  if (S.anaDone) return; S.anaDone = true;
+  const ms = S.d.members, cols = ms.map(m => hex(m.color));
+  const onStage = (x, y) => S.d.parts.some(p => p.id !== "merdiven" && x >= Math.min(...p.poly.map(q => q[0])) && x <= Math.max(...p.poly.map(q => q[0])) && y >= Math.min(...p.poly.map(q => q[1])) && y <= Math.max(...p.poly.map(q => q[1])));
+  // hex bins (0.55 m), each sample spread over its neighbourhood with the same kernel as the floor colours
+  const HR = 0.55, HW = Math.sqrt(3) * HR, hexes = [];
+  for (let row = 0, y = HR; y < S.d.h; row++, y += 1.5 * HR) for (let x = (row % 2 ? HW : HW / 2); x < S.d.w; x += HW) if (onStage(x, y)) hexes.push({ x, y, v: ms.map(() => 0) });
+  ms.forEach((m, i) => { for (const s of m.s) { const w = s[4]; if (!w) continue; for (const h of hexes) { const d2 = (h.x - s[1]) ** 2 + (h.y - s[2]) ** 2; if (d2 < R * R) h.v[i] += w * (1 - d2 / (R * R)) ** 2; } } });
+  let vmax = 0; for (const h of hexes) { h.T = h.v.reduce((a, b) => a + b, 0); h.best = h.v.indexOf(Math.max(...h.v)); h.share = h.v[h.best] / (h.T || 1); vmax = Math.max(vmax, h.T); }
+  // A · territory: hexagon size = how much time was spent there, colour = who spent the most, ring = how contested
+  { const W = 560, g = hiDPI($("#terr"), W, W), sc = W / S.d.w; g.fillStyle = "#0b0819"; g.fillRect(0, 0, W, W);
+    stageOutline(g, sc, 0, 0, 0.25);
+    const own = ms.map(() => 0);
+    for (const h of hexes) { own[h.best] += h.T; if (h.T / vmax < 0.04) continue; const r = HR * sc * (0.5 + 0.47 * Math.sqrt(h.T / vmax)), c = cols[h.best];
+      hexPath(g, h.x * sc, h.y * sc, r); g.fillStyle = rgbA(c, 0.35 + 0.65 * h.share); g.fill();
+      if (h.share < 0.45) { g.strokeStyle = "rgba(255,255,255,.5)"; g.lineWidth = 1; g.stroke(); } }
+    g.fillStyle = "rgba(236,226,255,.55)"; g.font = "600 11px Manrope"; g.textAlign = "left";
+    [["PLATFORM", 1.25], ["MAIN STAGE", 4.6], ["RUNWAY", 12.4], ["FRONT BLOCK", 16.6]].forEach(([t, y]) => g.fillText(t, (t === "RUNWAY" ? 8.5 : 0.35) * sc, y * sc + (t === "PLATFORM" ? 4 : 0)));
+    g.textAlign = "center"; g.fillText("AUDIENCE", W / 2, W - 6); g.fillText("◀ LEFT", 0.9 * sc + 18, W - 6); g.fillText("RIGHT ▶", W - 0.9 * sc - 18, W - 6);
+    const tot = own.reduce((a, b) => a + b, 0) || 1;
+    $("#tleg").innerHTML = `<div class="k">Hexagon size: time spent there · colour: who spent the most · white edge: shared, nobody above 45%</div>` +
+      ms.map((m, i) => [m, own[i] / tot]).sort((a, b) => b[1] - a[1]).map(([m, f]) => `<div><i style="background:${m.color}"></i><b>${short(m)}</b><span class="bar"><b style="width:${(f * 100 / 0.3).toFixed(0)}%;background:${m.color}"></b></span><span>${(f * 100).toFixed(0)}%</span></div>`).join("");
+  }
+  // B · formation timeline: left-to-right position (x) through the song, one line each; crossings are the place changes
+  { const W = 300, H = 560, g = hiDPI($("#tline"), W, H), t0 = S.d.t0, t1 = S.d.t1, X = x => 22 + (x / S.d.w) * (W - 34), Y = d => 26 + ((toVideo(d) - toVideo(t0)) / (toVideo(t1) - toVideo(t0))) * (H - 40);
+    g.fillStyle = "#0b0819"; g.fillRect(0, 0, W, H);
+    // zone bands: when most of the six are on the platform, main stage or front block
+    const zoneAt = k => { const z = ms.map(m => m.s[Math.min(k, m.s.length - 1)][6]); const c = {}; z.forEach(v => c[v] = (c[v] || 0) + 1); return Object.entries(c).sort((a, b) => b[1] - a[1])[0][0]; };
+    const zc = { platform: "rgba(170,140,255,.10)", merdiven: "rgba(170,140,255,.06)", ana_sahne_on: "rgba(255,255,255,.035)", runway: "rgba(255,200,120,.08)", on_blok: "rgba(255,160,200,.07)" };
+    const zl = { platform: "platform", merdiven: "stairs", ana_sahne_on: "main stage", runway: "runway", on_blok: "front block" };
+    let k0 = 0, zPrev = zoneAt(0); const N = ms[0].s.length;
+    for (let k = 1; k <= N; k++) { const z = k < N ? zoneAt(k) : null; if (z !== zPrev) { const ya = Y(ms[0].s[k0][0]), yb = Y(ms[0].s[Math.min(k, N - 1)][0]);
+      g.fillStyle = zc[zPrev] || "transparent"; g.fillRect(14, ya, W - 20, yb - ya); if (yb - ya > 26) { g.save(); g.fillStyle = "rgba(236,226,255,.45)"; g.font = "600 9.5px Manrope"; g.translate(10, (ya + yb) / 2); g.rotate(-Math.PI / 2); g.textAlign = "center"; g.fillText(zl[zPrev].toUpperCase(), 0, 0); g.restore(); }
+      k0 = k; zPrev = z; } }
+    g.strokeStyle = "rgba(236,226,255,.12)"; g.lineWidth = 1; [0, 8, 16, 24].forEach(x => { g.beginPath(); g.moveTo(X(x), 20); g.lineTo(X(x), H - 12); g.stroke(); });
+    g.fillStyle = "rgba(236,226,255,.5)"; g.font = "600 9.5px Manrope"; g.textAlign = "center"; g.fillText("LEFT", X(4), 14); g.fillText("CENTRE", X(12), 14); g.fillText("RIGHT", X(20), 14);
+    g.textAlign = "right"; g.font = "500 9px JetBrains Mono"; for (let v = 30; v <= 290; v += 30) { const d = toData(v); if (d < t0 || d > t1) continue; g.fillText(`${Math.floor(v / 60)}:${String(v % 60).padStart(2, "0")}`, W - 2, Y(d) + 3); }
+    ms.forEach((m, i) => { g.strokeStyle = m.color; g.lineWidth = 2.2; g.lineJoin = "round"; g.globalAlpha = 0.95; g.beginPath();
+      m.s.forEach((s, k) => k ? g.lineTo(X(s[1]), Y(s[0])) : g.moveTo(X(s[1]), Y(s[0]))); g.stroke(); g.globalAlpha = 1; });
+  }
+  // C · one card each: her own hexes, her average spot, her numbers
+  const centre = m => m.s.filter(s => s[1] >= 9 && s[1] <= 15).length / m.s.length, front = m => m.s.filter(s => s[6] === "on_blok" || (s[6].startsWith("ana") && s[2] > 6.5)).length / m.s.length;
+  const distOf = m => { let d = 0; for (let k = 1; k < m.s.length; k++) d += Math.hypot(m.s[k][1] - m.s[k - 1][1], m.s[k][2] - m.s[k - 1][2]); return d; };
+  const stats = ms.map(m => ({ m, c: centre(m), f: front(m), d: distOf(m), lx: m.s.reduce((a, s) => a + s[1], 0) / m.s.length }));
+  const rank = (key, i) => 1 + stats.filter(o => o[key] > stats[i][key]).length;
+  $("#who").innerHTML = ms.map((m, i) => `<div class="wc"><h4><i style="background:${m.color}"></i>${m.name}</h4><canvas id="wp-${m.key}"></canvas>
+    <div class="chips"><span><b>${(100 * stats[i].c).toFixed(0)}%</b>centre stage<em>#${rank("c", i)}</em></span><span><b>${(100 * stats[i].f).toFixed(0)}%</b>at the front<em>#${rank("f", i)}</em></span><span><b>${Math.round(stats[i].d)} m</b>walked<em>#${rank("d", i)}</em></span></div>
+    <p id="ws-${m.key}"></p></div>`).join("");
+  ms.forEach((m, i) => {
+    const W = 260, g = hiDPI($(`#wp-${m.key}`), W, W), sc = W / S.d.w; g.fillStyle = "#0b0819"; g.fillRect(0, 0, W, W); stageOutline(g, sc, 0, 0, 0.3);
+    let mx = 0; for (const h of hexes) mx = Math.max(mx, h.v[i]);
+    for (const h of hexes) { const v = h.v[i] / mx; if (v < 0.05) continue; hexPath(g, h.x * sc, h.y * sc, HR * sc * (0.55 + 0.42 * Math.sqrt(v))); g.fillStyle = rgbA(cols[i], 0.3 + 0.7 * v); g.fill(); }
+    // average spot on each part of the stage she used, like average positions in a match report
+    for (const zone of ["platform", "ana_sahne_on", "on_blok"]) { const ss = m.s.filter(s => s[6] === zone); if (ss.length < 4) continue;
+      const ax = ss.reduce((a, s) => a + s[1], 0) / ss.length, ay = ss.reduce((a, s) => a + s[2], 0) / ss.length, sx = Math.sqrt(ss.reduce((a, s) => a + (s[1] - ax) ** 2, 0) / ss.length);
+      g.strokeStyle = "rgba(255,255,255,.75)"; g.lineWidth = 1.2; g.beginPath(); g.moveTo((ax - sx) * sc, ay * sc); g.lineTo((ax + sx) * sc, ay * sc); g.stroke();
+      g.beginPath(); g.arc(ax * sc, ay * sc, 5.5, 0, Math.PI * 2); g.fillStyle = "#fff"; g.fill(); g.strokeStyle = m.color; g.lineWidth = 2.5; g.stroke(); }
+    const sh = SECT.map(([lab, f]) => [lab, m.s.filter(f).length / m.s.length]).sort((a, b) => b[1] - a[1]);
+    const side = stats[i].lx < 10.5 ? "the left" : stats[i].lx > 13.5 ? "the right" : "the middle";
+    $(`#ws-${m.key}`).innerHTML = `Home: <b>${sh[0][0].toLowerCase()}</b> (${(100 * sh[0][1]).toFixed(0)}% of her song), then ${sh[1][0].toLowerCase()} (${(100 * sh[1][1]).toFixed(0)}%). Works <b>${side}</b> of the stage.`;
+  });
+  // the three findings, written from the numbers
+  const by = key => [...stats].sort((a, b) => b[key] - a[key]);
+  const L = by("lx").slice(-1)[0], Rr = by("lx")[0];
+  $("#finds").innerHTML = [
+    `<b style="color:${by("c")[0].m.color}">${short(by("c")[0].m)}</b> holds the centre most: ${(100 * by("c")[0].c).toFixed(0)}% of the song between the centre lines.`,
+    `<b style="color:${L.m.color}">${short(L.m)}</b> lives on the left, <b style="color:${Rr.m.color}">${short(Rr.m)}</b> on the right: the two edges of the line.`,
+    `<b style="color:${by("d")[0].m.color}">${short(by("d")[0].m)}</b> covers the most ground, about ${Math.round(by("d")[0].d)} m.`].map(t => `<div>${t}</div>`).join("");
+}
+
 // the flat plan (top view), drawn next to the 3D stage
 function drawPlan() {
   const c = $("#plan"); if (!c || !c.offsetWidth) return; const d = Math.min(2, window.devicePixelRatio || 1), W = c.offsetWidth * d, H = c.offsetHeight * d;
@@ -365,13 +447,15 @@ async function init() {
   const setOff = v => { S.off = Math.max(-6, Math.min(6, v)); $("#offv").textContent = `${S.off > 0 ? "+" : ""}${S.off.toFixed(1)} s`; S.anchor = null; };
   $("#nudgeM").onclick = () => setOff(S.off - 0.5); $("#nudgeP").onclick = () => setOff(S.off + 0.5);
   $("#vmin").onclick = () => { $("#vcard").classList.toggle("min"); $("#vmin").textContent = $("#vcard").classList.contains("min") ? "+" : "–"; };
+  $("#anaBtn").onclick = () => { $("#ana").hidden = false; analysis(); }; $("#aclose").onclick = () => { $("#ana").hidden = true; };
+  $("#ana").onclick = e => { if (e.target.id === "ana") $("#ana").hidden = true; };
   $("#about").onclick = () => { $("#drawer").hidden = false; }; $("#dclose").onclick = () => { $("#drawer").hidden = true; };
   $("#drawer").onclick = e => { if (e.target.id === "drawer") $("#drawer").hidden = true; };
   document.addEventListener("keydown", e => {
     if (e.target.tagName === "INPUT") return;
     if (e.code === "Space") { e.preventDefault(); $("#play").click(); }
     if (e.key === "ArrowRight") setT(S.t + 2, true); if (e.key === "ArrowLeft") setT(S.t - 2, true);
-    if (e.key === ",") $("#nudgeM").click(); if (e.key === ".") $("#nudgeP").click(); if (e.key === "Escape") $("#drawer").hidden = true;
+    if (e.key === ",") $("#nudgeM").click(); if (e.key === ".") $("#nudgeP").click(); if (e.key === "Escape") { $("#drawer").hidden = true; $("#ana").hidden = true; }
   });
   document.fonts?.ready.then(() => { for (const m of S.d.members) { const P = G.p[m.key], o = P.lbl; P.grp.remove(o); P.lbl = labelSprite(m.name.split(" ")[0]); P.lbl.position.copy(o.position); P.grp.add(P.lbl); } lanes(); });
   S.ready = true;
