@@ -7,6 +7,7 @@ import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
+import { buildSet, updateSet, makeFigure, poseFigure } from "./set.js?v=2";
 
 const ZN = { platform: "Platform", merdiven: "Stairs", ana_sahne_on: "Main stage", runway: "Runway", on_blok: "Front block" };
 const CELL = 0.2, R = 3.2, TRAIL = 12, TAU = 18, FLOOR = 0.45, HPX = 10;     // heat cell (m), glow radius (m), heat texture px per m
@@ -116,11 +117,11 @@ function edges(poly, h, col = 0xece2ff, op = 0.9) {
   const pts = poly.map(([x, y]) => W3(x, y, h + 0.02)); const g = new THREE.BufferGeometry().setFromPoints(pts);
   return new THREE.Line(g, new THREE.LineBasicMaterial({ color: col, transparent: true, opacity: op }));
 }
-function labelSprite(name) {                  // the name written along the figure itself, read bottom to top
+function labelSprite(name, color = "#120a26") {                  // the name written along the figure itself, read bottom to top
   const k = 8, w = 14, h = 12 + name.length * 7.2, c = document.createElement("canvas"); c.width = w * k; c.height = h * k;
   const g = c.getContext("2d"); g.scale(k, k); g.translate(w / 2, h / 2); g.rotate(-Math.PI / 2);
   g.font = "800 10px Manrope, sans-serif"; g.textAlign = "center"; g.textBaseline = "middle";
-  g.fillStyle = "#120a26"; g.fillText(name, 0, 0.5);
+  g.fillStyle = color; g.fillText(name, 0, 0.5);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; t.minFilter = THREE.LinearFilter; t.generateMipmaps = false;
   const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, depthWrite: false, depthTest: false }));
   const H = 1.05; sp.scale.set(H * w / h, H, 1); sp.renderOrder = 10; return sp;
@@ -149,8 +150,8 @@ function buildScene() {
   Object.assign(G, { r, scene, cam, ctl, el });
 
   const parts = Object.fromEntries(S.d.parts.map(p => [p.id, p])); BASE = parts.ana_sahne.h;
-  const deck = new THREE.MeshStandardMaterial({ color: 0x221a42, roughness: 0.38, metalness: 0.35 });
-  const side = new THREE.MeshStandardMaterial({ color: 0x120c26, roughness: 0.8, emissive: 0x0d0820 });
+  const deck = new THREE.MeshPhysicalMaterial({ color: 0x150f28, roughness: 0.34, metalness: 0.35, clearcoat: 0.35, clearcoatRoughness: 0.3, envMapIntensity: 0.18 });
+  const side = new THREE.MeshStandardMaterial({ color: 0x0c0818, roughness: 0.8, emissive: 0x0d0820, envMapIntensity: 0.1 });
   const floorH = -BASE;                                                    // the arena floor
   for (const id of ["ana_sahne", "runway", "on_blok"]) { scene.add(box(parts[id].poly, 0, floorH, [deck, side])); scene.add(edges(parts[id].poly, 0)); }
   const ph = parts.platform.h - BASE; scene.add(box(parts.platform.poly, ph, 0, [deck, side])); scene.add(edges(parts.platform.poly, ph));
@@ -178,7 +179,7 @@ function buildScene() {
   const pm = new THREE.Mesh(new THREE.PlaneGeometry(S.d.w, pd), new THREE.MeshBasicMaterial({ map: G.platTex, transparent: true, opacity: 0.85, depthWrite: false, blending: THREE.AdditiveBlending }));
   pm.rotation.x = -Math.PI / 2; pm.position.set(0, ph + 0.012, pd / 2 - S.d.h / 2); scene.add(pm);
   // arena floor and the crowd's phone lights
-  const af = new THREE.Mesh(new THREE.CircleGeometry(60, 64), new THREE.MeshStandardMaterial({ color: 0x0b0718, roughness: 1 })); af.rotation.x = -Math.PI / 2; af.position.y = floorH - 0.01; scene.add(af);
+  const af = new THREE.Mesh(new THREE.CircleGeometry(60, 64), new THREE.MeshStandardMaterial({ color: 0x05030a, roughness: 1, envMapIntensity: 0 })); af.rotation.x = -Math.PI / 2; af.position.y = floorH - 0.01; scene.add(af);
   const N = 900, cp = new Float32Array(N * 3), cc = new Float32Array(N * 3);
   for (let i = 0; i < N; i++) { let x, y; do { x = Math.random() * 46 - 23; y = Math.random() * 30 - 4; } while (y < 25 && (x > -12 && x < 12 && y < 13) || (y < 25 && x > -9 && x < 9));
     cp.set([x, floorH + 1.5 + Math.random() * 0.3, y], i * 3); const warm = Math.random() < 0.18; cc.set(warm ? [1, 0.84, 0.55] : [0.86, 0.82, 1], i * 3); }
@@ -189,18 +190,15 @@ function buildScene() {
   const gt = glowTex(), bt = beamTex(); G.p = {};
   for (const m of S.d.members) {
     const col = new THREE.Color(m.color), grp = new THREE.Group();
-    const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.2, 1.05, 6, 14), new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 0.85, roughness: 0.4 }));
-    body.position.y = 0.73; grp.add(body);
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.17, 18, 14), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0.9 }));
-    head.position.y = 1.52; grp.add(head);
+    const fig = makeFigure(m.name, m.color); grp.add(fig.g);
     const pool = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 3.4), new THREE.MeshBasicMaterial({ map: gt, color: col, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false }));
     pool.rotation.x = -Math.PI / 2; pool.position.y = 0.03; grp.add(pool);
     const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 1.15, 10, 24, 1, true), new THREE.MeshBasicMaterial({ map: bt, color: col, transparent: true, opacity: 0.22, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
     beam.position.y = 5; grp.add(beam);
     const ring = new THREE.Mesh(new THREE.RingGeometry(0.62, 0.7, 40), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.9, side: THREE.DoubleSide }));
     ring.rotation.x = -Math.PI / 2; ring.position.y = 0.04; grp.add(ring);
-    const lbl = labelSprite(m.name.split(" ")[0]); lbl.position.y = 0.74; grp.add(lbl);
-    scene.add(grp); G.p[m.key] = { grp, body, head, pool, beam, ring, lbl };
+    const lbl = labelSprite(m.name.split(" ")[0], fig.txt); lbl.position.y = 0.78; lbl.scale.multiplyScalar(0.85); grp.add(lbl);
+    scene.add(grp); G.p[m.key] = { grp, fig, pool, beam, ring, lbl, i: S.d.members.indexOf(m) };
   }
   // backing dancers (not mapped one by one): seen in the wide shots of the video, on the main stage flanks after the descent and
   // up on the platform during two later passages. Drawn as quiet grey figures, in video time.
@@ -216,6 +214,7 @@ function buildScene() {
   for (const m of S.d.members) { const geo = new THREE.BufferGeometry(); const arr = new Float32Array(S.PATH[m.key].length * 3); geo.setAttribute("position", new THREE.BufferAttribute(arr, 3));
     S.PATH[m.key].forEach(([t, x, y, z], i) => { const v = W3(x, y, z - BASE + 0.05); arr.set([v.x, v.y, v.z], i * 3); }); geo.setDrawRange(0, 0);
     const ln = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: m.color, transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false })); scene.add(ln); G.paths[m.key] = ln; }
+  G.set = buildSet({ r, scene, cam, S, W3, parts, BASE, glowTex });
   // bloom
   const comp = new EffectComposer(r); comp.addPass(new RenderPass(scene, cam));
   G.bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.5, 0.5, 0.7); comp.addPass(G.bloom); comp.addPass(new OutputPass()); G.comp = comp;
@@ -257,14 +256,14 @@ function update(now) {
     if (!on) continue;
     P.grp.position.copy(W3(p.x, p.y, p.z - BASE));
     const full = S.mode !== "all", vis = hidden ? 0.35 : 1;
-    P.body.material.opacity = vis; P.body.material.transparent = hidden; P.body.material.emissiveIntensity = hidden ? 0.25 : 0.85;
-    P.head.material.opacity = vis; P.head.material.transparent = hidden;
+    if (P.hid !== hidden) { for (const mt of P.fig.mats) { mt.transparent = hidden; mt.opacity = vis; mt.needsUpdate = true; } P.hid = hidden; }
+    const prev = P.last || P.grp.position.clone(); poseFigure(P.fig, S.t, P.i, prev.distanceTo(P.grp.position) > 0.02 ? false : false); P.last = P.grp.position.clone();
     P.beam.visible = full && !hidden; P.pool.visible = full && !hidden; P.ring.visible = hidden; P.lbl.material.opacity = hidden ? 0.6 : 1;
-    P.body.visible = P.head.visible = full || true;
     let n = 0; const arr = S.PATH[m.key]; while (n < arr.length && arr[n][0] <= tEnd) n++; G.paths[m.key].geometry.setDrawRange(0, n);
   }
   // backing dancers fade in and out with their passages
   { let o = 0; for (const c of G.crew.groups) { const k = Math.min(1, (S.t - c.a) / 1, (c.b - S.t) / 1); c.g.visible = k > 0; if (k > 0) o = Math.max(o, k); } G.crew.mat.opacity = 0.55 * o; }
+  updateSet(G.set, { r: G.r, scene: G.scene, S, t: S.t, now, G, pos, W3, BASE });
   // phone lights twinkle
   G.crowd.material.opacity = 0.55 + 0.15 * Math.sin((VID ? S.t * 1000 : now) / 700);
 }
