@@ -101,6 +101,35 @@ for m in members:
 
 # 2b) the camera moves all the time, the six much less: small shifts in the notes (under 0.8 m) are mostly the camera, not
 #     the performers. Each one holds her place until she really moves (more than 0.8 m) or changes part of the stage.
+# 2a) camera continuity: when the camera cuts, the six seem to jump forward, back or sideways together. If they stood side by side
+#     before the cut and side by side after it, they did not move: the whole group shifting at once between two readings is the
+#     camera. So the group's centre is smoothed (median over 14 s) and each one keeps her place relative to the others; then each
+#     one's own track loses single-reading spikes (median over 10 s). Real moves (a change of stage part, a swap) stay sharp.
+def _med(v, k):
+    h = k // 2; return [float(np.median(v[max(0, i - h):i + h + 1])) for i in range(len(v))]
+NS = len(members[0]["s"])
+zone_of = [max(set(z), key=z.count) for z in ([m["s"][k][6] for m in members] for k in range(NS))]
+runs, a0 = [], 0
+for k in range(1, NS + 1):
+    if k == NS or zone_of[k] != zone_of[a0]: runs.append((a0, k)); a0 = k
+for a, b in runs:
+    if b - a < 3: continue
+    for c in (1, 2):
+        mean = [float(np.mean([m["s"][k][c] for m in members if m["s"][k][6] == zone_of[k]])) for k in range(a, b)]
+        sm = _med(mean, 7)
+        for j, k in enumerate(range(a, b)):
+            for m in members:
+                if m["s"][k][6] == zone_of[k]: m["s"][k][c] = round(m["s"][k][c] + sm[j] - mean[j], 2)
+for m in members:
+    s, k0 = m["s"], 0
+    for k in range(1, NS + 1):
+        if k == NS or s[k][6] != s[k0][6]:
+            if k - k0 >= 3:
+                for c in (1, 2):
+                    sm = _med([s[i][c] for i in range(k0, k)], 5)
+                    for j, i in enumerate(range(k0, k)): s[i][c] = round(sm[j], 2)
+            k0 = k
+
 HOLD = 0.8
 for m in members:
     hx = hy = hz = None
