@@ -17,22 +17,25 @@ p.on("pageerror", e => console.log("pageerror", e.message));
 await p.goto("http://localhost:8125/index.html?video=1"); await p.waitForFunction(() => window.S && S.ready, null, { timeout: 90000 }); await p.evaluate(() => document.fonts.ready);
 await p.waitForTimeout(500);
 const cap = (title, text, k = "") => p.evaluate(([title, text, k]) => { const el = document.getElementById("cap"); el.dataset.t = "x"; el.innerHTML = `<div class="k">${k}</div><b>${title}</b><span>${text}</span>`; el.classList.add("on"); }, [title, text, k]);
-const at = async (t, mode = "acc", cam = CAM.front) => { await p.evaluate(([t, mode, cam]) => { if (S.mode !== mode) { S.mode = mode; S.heatKey = ""; } renderAt(t, cam); }, [t, mode, cam]); };
+const at = async (t, mode = "acc", cam = CAM.front, view = "audience") => { await p.evaluate(([t, mode, cam, view]) => { if (S.mode !== mode) { S.mode = mode; S.heatKey = ""; } G.view = view; renderAt(t, cam); }, [t, mode, cam, view]); };
 // camera keyframes (scene metres; the main stage top is y = 0, the crowd is toward +z)
 const CAM = { close: { p: [-7, 4.2, 4], t: [0, 1.6, -10] }, front: { p: [0, 15, 31], t: [0, -0.5, -1] }, high: { p: [14, 22, 24], t: [0, 0, 0] },
-  side: { p: [-24, 9, 14], t: [0, 0, 1] }, crowd: { p: [6, 5, 26], t: [0, 0.5, 4] }, top: { p: [0, 46, 6], t: [0, 0, 0.6] } };
+  side: { p: [-24, 9, 14], t: [0, 0, 1] }, crowd: { p: [6, 5, 26], t: [0, 0.5, 4] }, top: { p: [0, 46, 6], t: [0, 0, 0.6] },
+  plan: { p: [0, 42, -1.4], t: [0, 0, -2.6] } };
 const lerp = (a, b, k) => a.map((v, i) => v + (b[i] - v) * k);
 const camAt = (A, B, k) => ({ p: lerp(A.p, B.p, k), t: lerp(A.t, B.t, k) });
 
 // stills
-for (const [name, t, mode, cam] of [["post1_opening", 36, "acc", CAM.close], ["post2_run", 285, "acc", CAM.crowd], ["post3_song_map", 296, "all", CAM.high]]) {
-  await at(t, mode, cam); if (mode === "all") await cap("The whole song, as a map", "4½ minutes of six performers, each in her own colour: where she stood, and for how long.");
+for (const [name, t, mode, cam, view] of [["post1_opening", 36, "acc", CAM.close, "audience"], ["post2_footprints", 250, "acc", CAM.plan, "top"], ["post3_song_map", 296, "all", CAM.plan, "top"]]) {
+  await at(t, mode, cam, view); if (mode === "all") await cap("The whole song, as footprints", "Every circle is a stop: where she stood, and for how long. The floor takes the colour of whoever stood there longest.");
+  else if (view === "top") await cap("Footprints", "Each circle is a stop. The longer she stood there, the bigger it gets.");
   await p.waitForTimeout(700); await p.screenshot({ path: `${OUT}/${name}.png` }); console.log("still", name);
+  await p.evaluate(() => { const el = document.getElementById("cap"); el.classList.remove("on"); el.dataset.t = ""; });
 }
 if (process.env.STILLS_ONLY) process.exit(0);
 
 // 12 s: platform → stairs → the main stage (fast) → the run and the front block → the whole song
-const keys = [[0, 29], [1.5, 38], [3.5, 78], [6.5, 262], [9.5, 293]];
+const keys = [[0, 29], [1.5, 40], [3.5, 80], [6.5, 205], [9.5, 293]];
 const ease = k => k * k * (3 - 2 * k);
 const vt = s => { for (let i = 1; i < keys.length; i++) if (s <= keys[i][0]) { const [a, ta] = keys[i - 1], [b, tb] = keys[i], k = (s - a) / (b - a); return ta + (tb - ta) * (0.25 * k + 0.75 * ease(k)); } return keys.at(-1)[1]; };
 const N = 12 * FPS;
@@ -40,8 +43,8 @@ await p.evaluate(() => { S.mode = "acc"; S.heatKey = ""; S.applied = {}; for (co
 for (let n = 0; n < N; n++) {
   const s = n / FPS;
   const e = k => k * k * (3 - 2 * k);
-  const cam = s < 1.5 ? CAM.close : s < 3.5 ? camAt(CAM.close, CAM.side, e((s - 1.5) / 2)) : s < 6.5 ? camAt(CAM.side, CAM.front, e((s - 3.5) / 3)) : s < 9.5 ? camAt(CAM.front, CAM.crowd, e((s - 6.5) / 3)) : camAt(CAM.crowd, CAM.high, e(Math.min(1, (s - 9.5) / 1.6)));
-  if (s < 9.5) await at(vt(s), "acc", cam); else { await at(296, "all", cam); await cap("The whole song, as a map", "4½ minutes, six performers, each in her own colour: where she stood, and for how long."); }
+  const k = s < 1.5 ? 0 : e(Math.min(1, (s - 1.5) / 2.2)), cam = camAt(CAM.close, CAM.plan, k), view = k > 0.55 ? "top" : "audience";
+  if (s < 9.5) await at(vt(s), "acc", cam, view); else { await at(296, "all", CAM.plan, "top"); await cap("The whole song, as footprints", "Every circle is a stop: where she stood, and for how long. The floor takes the colour of whoever stood there longest."); }
   await p.screenshot({ path: `${FR}/f${String(n).padStart(4, "0")}.png` });
   if (n % 60 === 0) console.log("frame", n);
 }

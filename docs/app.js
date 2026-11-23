@@ -12,6 +12,8 @@ import { buildSet, updateSet, makeFigure, poseFigure } from "./set.js?v=3";
 const ZN = { platform: "Platform", merdiven: "Stairs", ana_sahne_on: "Main stage", runway: "Runway", on_blok: "Front block" };
 const CELL = 0.2, R = 3.2, TRAIL = 12, TAU = 18, FLOOR = 0.45, HPX = 10;     // heat cell (m), glow radius (m), heat texture px per m
 const $ = s => document.querySelector(s);
+// saturated versions of the members' colours: the floor map and the footprints must stay apart from each other
+const VIVID = { Siyah: "#9b6bff", Kizil: "#ff4d5e", Kumral: "#ffc928", Mavi: "#3d8bff", Dalgali: "#21c47a", Platin: "#ff5fb4" };
 const fmt = t => `${Math.floor(Math.max(0, t) / 60)}:${String(Math.floor(Math.max(0, t) % 60)).padStart(2, "0")}`;
 const hex = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
 const rgba = (h, a) => { const [r, g, b] = hex(h); return `rgba(${r},${g},${b},${a})`; };
@@ -70,14 +72,15 @@ function updateGrids() {
   for (const m of S.d.members) { const g = S.recent[m.key]; g.fill(0); if (S.mode === "all") continue;
     for (const s of m.s) { const age = t - s[0]; if (age < 0) break; if (age > 4 * TAU) continue; const w = wOf(s); if (w) stamp(g, s[1], s[2], w * Math.exp(-age / TAU)); } }
 }
-function paintHeat() {     // where performers share the floor their colours blend, in proportion to each one's presence
+function paintHeat() {     // every spot takes the colour of whoever spent the most time there; brightness = how much time in total
   const ms = S.d.members.filter(m => S.on.has(m.key)), cols = ms.map(m => hex(m.color)), gs = ms.map(m => S.grids[m.key]), rs = ms.map(m => S.recent[m.key]);
   const fl = S.mode === "acc" ? FLOOR : 1, rc = S.mode === "acc" ? 1 - FLOOR : 0, K = S.mode === "trail" ? 1.1 : S.mode === "acc" ? 3.2 : 5.5, px = IMG.data;
   for (let p = 0, q = 0; p < GW * GH; p++, q += 4) {
-    let T = 0, sw = 0, r = 0, g = 0, b = 0;
-    for (let i = 0; i < gs.length; i++) { const v = fl * gs[i][p] + rc * rs[i][p]; if (v <= 0) continue; T += v; const w = v; sw += w; r += cols[i][0] * w; g += cols[i][1] * w; b += cols[i][2] * w; }
+    let T = 0, best = -1, bv = 0;
+    for (let i = 0; i < gs.length; i++) { const v = fl * gs[i][p] + rc * rs[i][p]; if (v <= 0) continue; T += v; if (v > bv) { bv = v; best = i; } }
     if (T < 1e-3) { px[q + 3] = 0; continue; }
-    px[q] = r / sw; px[q + 1] = g / sw; px[q + 2] = b / sw; px[q + 3] = 255 * 0.95 * (1 - Math.exp(-T / K));
+    const c = cols[best], share = bv / T;
+    px[q] = c[0]; px[q + 1] = c[1]; px[q + 2] = c[2]; px[q + 3] = 255 * (1 - Math.exp(-T / K)) * (0.5 + 0.5 * share);
   }
   hx.putImageData(IMG, 0, 0);
   // the floor texture: soft colour, only on the stage (a faint grid underneath)
@@ -85,8 +88,7 @@ function paintHeat() {     // where performers share the floor their colours ble
   tx.lineWidth = 1;                                        // a very light 1 m grid, just enough to read distances
   for (let x = 0; x <= S.d.w; x++) { tx.strokeStyle = x % 4 ? "rgba(220,205,255,.018)" : "rgba(220,205,255,.032)"; tx.beginPath(); tx.moveTo(x * HPX + 0.5, 0); tx.lineTo(x * HPX + 0.5, htex.height); tx.stroke(); }
   for (let y = 0; y <= S.d.h; y++) { tx.strokeStyle = y % 4 ? "rgba(220,205,255,.018)" : "rgba(220,205,255,.032)"; tx.beginPath(); tx.moveTo(0, y * HPX + 0.5); tx.lineTo(htex.width, y * HPX + 0.5); tx.stroke(); }
-  tx.imageSmoothingEnabled = true; tx.filter = "blur(2px)"; tx.drawImage(heat, 0, 0, htex.width, htex.height); tx.filter = "none";
-  tx.globalAlpha = 0.6; tx.drawImage(heat, 0, 0, htex.width, htex.height); tx.globalAlpha = 1;
+  tx.imageSmoothingEnabled = true; tx.filter = "blur(1px)"; tx.globalAlpha = 0.62; tx.drawImage(heat, 0, 0, htex.width, htex.height); tx.filter = "none"; tx.globalAlpha = 1;
   tx.globalCompositeOperation = "destination-in"; tx.fillStyle = "#fff";
   tx.beginPath();                                          // one path for all parts: destination-in keeps their union
   for (const p of S.d.parts) if (["ana_sahne", "runway", "on_blok", "platform"].includes(p.id)) { p.poly.forEach(([x, y], i) => i ? tx.lineTo(x * HPX, y * HPX) : tx.moveTo(x * HPX, y * HPX)); tx.closePath(); }
@@ -94,6 +96,19 @@ function paintHeat() {     // where performers share the floor their colours ble
   tx.globalCompositeOperation = "source-over";
   G.floorTex.needsUpdate = true; G.platTex.needsUpdate = true;
 }
+
+// ── footprints: where each performer stopped, and for how long (a circle per stop; its area grows with the time spent) ──
+const STOP_R = 0.9;                                   // a stop ends when she moves more than 0.9 m from where it began
+function stops() {
+  const out = {};
+  for (const m of S.d.members) { const L = []; let cur = null;
+    for (const s of m.s) { if (s[5] === "g") { cur = null; continue; }        // off camera: no footprint
+      if (cur && Math.hypot(s[1] - cur.x0, s[2] - cur.y0) <= STOP_R && Math.abs(s[3] - cur.z) < 0.5) { cur.n++; cur.t1 = s[0]; cur.sx += s[1]; cur.sy += s[2]; cur.x = cur.sx / cur.n; cur.y = cur.sy / cur.n; cur.w = Math.max(cur.w, s[4]); }
+      else { cur = { t0: s[0], t1: s[0], x0: s[1], y0: s[2], x: s[1], y: s[2], z: s[3], n: 1, sx: s[1], sy: s[2], w: s[4] }; L.push(cur); } }
+    out[m.key] = L; }
+  return out;
+}
+const stopR = sec => Math.min(2.1, 0.26 * Math.sqrt(Math.max(2, sec) / 2));     // 2 s → 0.26 m, 30 s → 1.0 m, 60 s → 1.4 m
 
 // ── positions: Catmull-Rom through the 2 s samples; everyone stays on stage from the first to the last sample ──
 function pos(m, t) {
@@ -125,6 +140,12 @@ function labelSprite(name, color = "#120a26") {                  // the name wri
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; t.minFilter = THREE.LinearFilter; t.generateMipmaps = false;
   const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, depthWrite: false, depthTest: false }));
   const H = 1.05; sp.scale.set(H * w / h, H, 1); sp.renderOrder = 10; return sp;
+}
+function secSprite(txt, color) {
+  const c = document.createElement("canvas"); c.width = 160; c.height = 64; const g = c.getContext("2d");
+  g.font = "800 34px Manrope, sans-serif"; g.textAlign = "center"; g.textBaseline = "middle"; g.lineWidth = 8; g.strokeStyle = "rgba(10,7,22,.85)"; g.strokeText(txt, 80, 34); g.fillStyle = color; g.fillText(txt, 80, 34);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, depthWrite: false, depthTest: false })); sp.scale.set(1.5, 0.6, 1); sp.renderOrder = 20; return sp;
 }
 function glowTex(inner = 1) {
   const c = document.createElement("canvas"); c.width = c.height = 128; const g = c.getContext("2d"), gr = g.createRadialGradient(64, 64, 0, 64, 64, 64);
@@ -172,11 +193,11 @@ function buildScene() {
     bd.position.set(0, ph + 22 * 900 / 2048 / 2 - 0.2, -S.d.h / 2 - 0.6); bd.renderOrder = -1; scene.add(bd); G.backdrop = bd; }
   // the colour map, on the stage and on the platform
   G.floorTex = new THREE.CanvasTexture(htex); G.floorTex.colorSpace = THREE.SRGBColorSpace;
-  const fm = new THREE.Mesh(new THREE.PlaneGeometry(S.d.w, S.d.h), new THREE.MeshBasicMaterial({ map: G.floorTex, transparent: true, opacity: 0.85, depthWrite: false, blending: THREE.AdditiveBlending }));
+  const fm = new THREE.Mesh(new THREE.PlaneGeometry(S.d.w, S.d.h), new THREE.MeshBasicMaterial({ map: G.floorTex, transparent: true, opacity: 1, depthWrite: false }));
   fm.rotation.x = -Math.PI / 2; fm.position.y = 0.012; scene.add(fm);
   const pd = Math.max(...parts.platform.poly.map(q => q[1]));
   G.platTex = new THREE.CanvasTexture(htex); G.platTex.colorSpace = THREE.SRGBColorSpace; G.platTex.repeat.set(1, pd / S.d.h); G.platTex.offset.set(0, 1 - pd / S.d.h);
-  const pm = new THREE.Mesh(new THREE.PlaneGeometry(S.d.w, pd), new THREE.MeshBasicMaterial({ map: G.platTex, transparent: true, opacity: 0.85, depthWrite: false, blending: THREE.AdditiveBlending }));
+  const pm = new THREE.Mesh(new THREE.PlaneGeometry(S.d.w, pd), new THREE.MeshBasicMaterial({ map: G.platTex, transparent: true, opacity: 1, depthWrite: false }));
   pm.rotation.x = -Math.PI / 2; pm.position.set(0, ph + 0.012, pd / 2 - S.d.h / 2); scene.add(pm);
   // arena floor and the crowd's phone lights
   const af = new THREE.Mesh(new THREE.CircleGeometry(60, 64), new THREE.MeshStandardMaterial({ color: 0x05030a, roughness: 1, envMapIntensity: 0 })); af.rotation.x = -Math.PI / 2; af.position.y = floorH - 0.01; scene.add(af);
@@ -214,15 +235,28 @@ function buildScene() {
   for (const m of S.d.members) { const geo = new THREE.BufferGeometry(); const arr = new Float32Array(S.PATH[m.key].length * 3); geo.setAttribute("position", new THREE.BufferAttribute(arr, 3));
     S.PATH[m.key].forEach(([t, x, y, z], i) => { const v = W3(x, y, z - BASE + 0.05); arr.set([v.x, v.y, v.z], i * 3); }); geo.setDrawRange(0, 0);
     const ln = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: m.color, transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false })); scene.add(ln); G.paths[m.key] = ln; }
+  // footprints: one flat disc per stop, in her colour, with a darker rim; long stops get their duration written next to them
+  G.stops = {}; const disc = new THREE.CircleGeometry(1, 48), rim = new THREE.RingGeometry(0.9, 1, 48);
+  S.d.members.forEach((m, i) => { const col = new THREE.Color(m.color), L = [];
+    for (const st of S.STOPS[m.key]) { const g = new THREE.Group();
+      const f = new THREE.Mesh(disc, new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.32 + 0.28 * st.w, depthWrite: false }));
+      const r2 = new THREE.Mesh(rim, new THREE.MeshBasicMaterial({ color: col.clone().multiplyScalar(1.15), transparent: true, opacity: 0.95, depthWrite: false }));
+      f.rotation.x = r2.rotation.x = -Math.PI / 2; g.add(f, r2); g.position.copy(W3(st.x, st.y, st.z - BASE + 0.03 + i * 0.004)); g.renderOrder = 2 + i;
+      let lbl = null; const sec = (st.n) * 2;
+      if (sec >= 20) { lbl = secSprite(`${sec} s`, m.color); lbl.position.set(0, 0.25, 0); g.add(lbl); }
+      g.visible = false; scene.add(g); L.push({ st, g, lbl }); }
+    G.stops[m.key] = L; });
+  const n0 = scene.children.length;
   G.set = buildSet({ r, scene, cam, S, W3, parts, BASE, glowTex });
+  G.deco = scene.children.slice(n0);              // lights, truss, screens, jets, haze: show-only, hidden in the plan view
   // bloom
   const comp = new EffectComposer(r); comp.addPass(new RenderPass(scene, cam));
   G.bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.5, 0.5, 0.7); comp.addPass(G.bloom); comp.addPass(new OutputPass()); G.comp = comp;
-  setView("audience", true);
+  setView(VID ? "audience" : "top", true);
 }
 
 // ── camera views ──
-const VIEWS = { audience: { p: [0, 15, 33], t: [0, -0.5, -1] }, top: { p: [0, 50, 3.2], t: [0, 0, 0.6] }, side: { p: [-36, 15, 12], t: [0, 0, 2.5] }, orbit: null };
+const VIEWS = { audience: { p: [0, 15, 33], t: [0, -0.5, -1] }, top: { p: [0, 45, 0.8], t: [0, 0, -0.6] }, side: { p: [-36, 15, 12], t: [0, 0, 2.5] }, orbit: null };
 function setView(v, now) {
   document.querySelectorAll(".views button").forEach(b => b.classList.toggle("on", b.dataset.view === v));
   G.view = v; G.ctl.autoRotate = v === "orbit"; G.ctl.autoRotateSpeed = 0.7;
@@ -258,12 +292,20 @@ function update(now) {
     const full = S.mode !== "all", vis = hidden ? 0.35 : 1;
     if (P.hid !== hidden) { for (const mt of P.fig.mats) { mt.transparent = hidden; mt.opacity = vis; mt.needsUpdate = true; } P.hid = hidden; }
     const prev = P.last || P.grp.position.clone(); poseFigure(P.fig, S.t, P.i, prev.distanceTo(P.grp.position) > 0.02 ? false : false); P.last = P.grp.position.clone();
-    P.beam.visible = full && !hidden; P.pool.visible = full && !hidden; P.ring.visible = hidden; P.lbl.material.opacity = hidden ? 0.6 : 1;
+    P.beam.visible = false; P.pool.visible = full && !hidden; P.pool.material.opacity = 0.22; P.ring.visible = true; P.lbl.material.opacity = hidden ? 0.6 : 1;
     let n = 0; const arr = S.PATH[m.key]; while (n < arr.length && arr[n][0] <= tEnd) n++; G.paths[m.key].geometry.setDrawRange(0, n);
   }
+  // footprints: stops already reached; the current one grows while she stands there
+  for (const m of S.d.members) { const on = S.on.has(m.key);
+    for (const o of G.stops[m.key]) { const st = o.st, show = on && S.footprints !== false && st.t0 <= tEnd;
+      o.g.visible = show; if (!show) continue;
+      const sec = Math.min(st.t1 + 2, tEnd + 2) - st.t0, r = stopR(sec); o.g.children[0].scale.setScalar(r); o.g.children[1].scale.setScalar(r);
+      if (o.lbl) o.lbl.visible = sec >= 20 && G.view !== "audience"; } }
   // backing dancers fade in and out with their passages
   { let o = 0; for (const c of G.crew.groups) { const k = Math.min(1, (S.t - c.a) / 1, (c.b - S.t) / 1); c.g.visible = k > 0; if (k > 0) o = Math.max(o, k); } G.crew.mat.opacity = 0.55 * o; }
   updateSet(G.set, { r: G.r, scene: G.scene, S, t: S.t, now, G, pos, W3, BASE });
+  const plan = G.view === "top"; if (plan) for (const o of G.deco) o.visible = false; else if (G.wasPlan) for (const o of G.deco) o.visible = true;
+  G.wasPlan = plan; G.crowd.visible = !plan; G.backdrop.visible = !plan; G.crew.groups.forEach(c => { if (plan) c.g.visible = false; }); G.bloom.strength = plan ? 0.22 : 0.5;
   // phone lights twinkle
   G.crowd.material.opacity = 0.55 + 0.15 * Math.sin((VID ? S.t * 1000 : now) / 700);
 }
@@ -357,7 +399,11 @@ function drawPlan() {
   g.clearRect(0, 0, W, H); g.save(); g.translate(ox, oy);
   for (const p of S.d.parts) { g.beginPath(); p.poly.forEach(([x, y], i) => i ? g.lineTo(x * k, y * k) : g.moveTo(x * k, y * k)); g.closePath();
     g.fillStyle = p.id === "platform" ? "rgba(60,44,110,.55)" : p.id === "merdiven" ? "rgba(80,60,140,.5)" : "rgba(30,20,62,.7)"; g.fill(); g.strokeStyle = "rgba(236,226,255,.45)"; g.lineWidth = 1 * d; g.stroke(); }
-  g.globalCompositeOperation = "screen"; g.drawImage(htex, 0, 0, S.d.w * k, S.d.h * k); g.globalCompositeOperation = "source-over";
+  g.drawImage(htex, 0, 0, S.d.w * k, S.d.h * k);
+  const tEnd = S.mode === "all" ? S.d.t1 : S.dt;
+  for (const m of S.d.members) { if (!S.on.has(m.key)) continue;
+    for (const st of S.STOPS[m.key]) { if (st.t0 > tEnd) continue; const r = stopR(Math.min(st.t1 + 2, tEnd + 2) - st.t0) * k;
+      g.beginPath(); g.arc(st.x * k, st.y * k, r, 0, 7); g.fillStyle = rgba(m.color, 0.45); g.fill(); g.lineWidth = 1 * d; g.strokeStyle = m.color; g.stroke(); } }
   for (const m of S.d.members) { if (!S.on.has(m.key)) continue; const p = pos(m, S.dt), hidden = p.state === "g";
     g.beginPath(); g.arc(p.x * k, p.y * k, 4.2 * d, 0, 7); g.fillStyle = hidden ? "rgba(20,14,40,.8)" : m.color; g.fill(); g.lineWidth = 1.4 * d; g.strokeStyle = hidden ? m.color : "#fff"; g.stroke(); }
   g.restore();
@@ -428,7 +474,9 @@ window.renderAt = (t, cam) => { S.t = t; if (cam) { G.fly = null; G.ctl.autoRota
 
 async function init() {
   S.d = await fetch("data/stage.json?v=17").then(r => r.json());
+  for (const m of S.d.members) { m.pastel = m.color; m.color = VIVID[m.key] || m.color; }
   S.on = new Set(S.d.members.map(m => m.key));
+  S.STOPS = stops();
   $("#nObs").textContent = S.d.kinds.gozlem;
   S.PATH = {}; for (const m of S.d.members) { S.PATH[m.key] = []; for (let t = S.d.t0; t <= S.d.t1 + 0.01; t += 0.25) { const p = pos(m, t); S.PATH[m.key].push([t, p.x, p.y, p.z]); } }
   $("#facts").innerHTML = S.d.moments.filter(m => m.t == null).map(m => `<div class="fact"><b>${m.title}</b><span>${m.text}</span></div>`).join("");

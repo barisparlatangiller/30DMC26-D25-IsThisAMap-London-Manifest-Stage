@@ -4,7 +4,7 @@
 Live: https://barisparlatangiller.github.io/30DMC26-D25-IsThisAMap-London-Manifest-Stage/
 
 The six members of Manifest during *Intro & Hileli* (live, OVO Arena Wembley) are mapped on a 24 × 24 m stage plan,
-in sync with the YouTube video. Each performer leaves a pastel heat trail in her colour, so the song draws its own map.
+in sync with the YouTube video. Each performer leaves footprints in her colour: a circle wherever she stopped, growing with the time she stood there, so the song draws its own map. The default view is the plan from above.
 
 | Member | Colour |
 |---|---|
@@ -40,6 +40,11 @@ no player): `node pipeline/video.mjs` → `media/`.
 
 Heat: every sample counts for 2 s as a radial glow that fades to zero 3.2 m from the performer. Glows are weighted
 by certainty: clear 1.0, approximate 0.6, silhouette 0.4. "Not visible" samples are left out of the heat map.
+Each spot of the floor takes the colour of whoever spent the most time there (saturated versions of the six colours), brighter
+where more time was spent in total.
+
+Footprints: consecutive samples within 0.9 m of where a stop began form one stop. Each stop is a circle in her colour whose
+area grows with the time spent (2 s: 0.5 m across, 30 s: 2 m, 60 s: 2.8 m); stops of 20 s or more show their duration.
 
 ## Sync with the video
 The positions were noted on a clock that drifts against the published video: about 3 s at the start and about 40 s

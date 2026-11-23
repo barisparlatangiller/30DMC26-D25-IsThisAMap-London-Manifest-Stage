@@ -8,7 +8,7 @@
 <meta name="theme-color" content="#0a0716">
 <link rel="preload" href="fonts/manrope-latin-800-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/manrope-latin-500-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link href="style.css?v=33" rel="stylesheet">
+<link href="style.css?v=40" rel="stylesheet">
 </head>
 <body>
 <div class="haze" aria-hidden="true"><i></i><i></i><i></i></div>
@@ -27,13 +27,14 @@
 </aside>
 
 <div class="views" role="group" aria-label="Camera">
-  <button data-view="audience" class="on">Audience</button><button data-view="top">Top</button><button data-view="side">Side</button><button data-view="orbit">Orbit</button>
+  <button data-view="top" class="on">Plan</button><button data-view="audience">Audience</button><button data-view="side">Side</button><button data-view="orbit">Orbit</button>
   <span class="hint">drag to turn · scroll to zoom</span>
 </div>
 <div class="modes" role="group" aria-label="What the colours show">
   <button data-mode="acc" class="on">Footprints</button><button data-mode="trail">Last 12 s</button><button data-mode="all">Whole song</button>
 </div>
 
+<div class="fpkey" aria-hidden="true"><i class="s"></i><i class="m"></i><i class="l"></i><span>footprints: where she stopped · bigger = longer</span></div>
 <div class="lower3" id="cap" aria-live="polite"></div>
 <figure class="plancard"><figcaption>Plan · from above</figcaption><canvas id="plan"></canvas></figure>
 
@@ -77,7 +78,8 @@
       stage, a 7.5 m runway and an 18 m front block. Between the 2 s samples the performers glide on a smooth curve.
       Who stands in front of whom was read again from the wide shots every 2.5 s; the backing dancers seen in those shots are drawn as grey figures, not mapped one by one.</p>
     <p>Colour: every sample counts as 2 seconds of presence, strongest where she stands and gone 3.2 m away. Fresh footprints glow,
-      then settle to a lasting trace. Where several performers share the floor, their colours blend into each other, weighted by how long each one stood there.
+      then settle to a lasting trace. Where several performers share the floor, the spot takes the colour of whoever stood there longest; it gets brighter the more time was spent there in total.
+      On top, every stop leaves a footprint: a circle in her colour wherever she stayed within 0.9 m, its area growing with the time she stood there (2 s small, 30 s about 2 m across). Stops of 20 s or more carry their duration.
       Clear sightings count fully, approximate ones 0.6, silhouettes 0.4; moments when she is out of frame are left out and shown as a dashed ring.</p>
     <div class="facts" id="facts"></div>
     <h3>Sync with the video</h3>
@@ -94,6 +96,6 @@
   </div>
 </div>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
-<script type="module" src="app.js?v=48"></script>
+<script type="module" src="app.js?v=40"></script>
 </body>
 </html>
