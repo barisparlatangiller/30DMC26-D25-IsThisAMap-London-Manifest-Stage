@@ -43,7 +43,8 @@ await p.evaluate(() => { S.mode = "acc"; S.heatKey = ""; S.applied = {}; for (co
 for (let n = 0; n < N; n++) {
   const s = n / FPS;
   const e = k => k * k * (3 - 2 * k);
-  const k = s < 1.5 ? 0 : e(Math.min(1, (s - 1.5) / 2.2)), cam = camAt(CAM.close, CAM.plan, k), view = k > 0.55 ? "top" : "audience";
+  const k1 = s < 1.5 ? 0 : e(Math.min(1, (s - 1.5) / 1.2)), k2 = s < 2.7 ? 0 : e(Math.min(1, (s - 2.7) / 1.3));
+  const cam = k2 > 0 ? camAt(CAM.front, CAM.plan, k2) : camAt(CAM.close, CAM.front, k1), view = k2 > 0.5 ? "top" : "audience";
   if (s < 9.5) await at(vt(s), "acc", cam, view); else { await at(296, "all", CAM.plan, "top"); await cap("The whole song, as footprints", "Every circle is a stop: where she stood, and for how long. The floor takes the colour of whoever stood there longest."); }
   await p.screenshot({ path: `${FR}/f${String(n).padStart(4, "0")}.png` });
   if (n % 60 === 0) console.log("frame", n);
