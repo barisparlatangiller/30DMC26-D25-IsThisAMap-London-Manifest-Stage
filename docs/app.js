@@ -296,7 +296,7 @@ function update(now) {
   const tEnd = S.mode === "all" ? S.d.t1 : S.dt, sil = S.t >= LIGHTS_ON && S.t < SIL_END;
   for (const o of G.heatM) o.visible = !sil;
   for (const m of S.d.members) {
-    const P = G.p[m.key], on = S.on.has(m.key), p = pos(m, S.dt), hidden = p.state === "g";
+    const P = G.p[m.key], on = S.on.has(m.key), p = pos(m, S.dt), hidden = false;   // off camera she looks the same (Barış, 24 Nov)
     const dawn = S.t >= LIGHTS_ON ? 1 : 0;                                // the video opens dark; the six appear with the lights
     P.grp.visible = on && dawn > 0; G.paths[m.key].visible = on && dawn > 0 && !sil;
     for (const mt of P.fig.mats) mt.uniforms.uSil.value = sil ? 1 : 0;
@@ -418,7 +418,7 @@ function drawPlan() {
   for (const m of S.d.members) { if (!S.on.has(m.key) || sil) continue;
     for (const st of S.STOPS[m.key]) { if (st.t0 > tEnd) continue; const r = stopR(Math.min(st.t1 + 2, tEnd + 2) - st.t0) * k;
       g.beginPath(); g.arc(st.x * k, st.y * k, r, 0, 7); g.fillStyle = rgba(m.color, 0.45); g.fill(); g.lineWidth = 1 * d; g.strokeStyle = m.color; g.stroke(); } }
-  for (const m of S.d.members) { if (!S.on.has(m.key)) continue; const p = pos(m, S.dt), hidden = p.state === "g";
+  for (const m of S.d.members) { if (!S.on.has(m.key)) continue; const p = pos(m, S.dt), hidden = false;
     g.beginPath(); g.arc(p.x * k, p.y * k, 4.2 * d, 0, 7); g.fillStyle = sil ? "#08060c" : hidden ? "rgba(20,14,40,.8)" : m.color; g.fill(); g.lineWidth = 1.4 * d; g.strokeStyle = sil ? "rgba(236,226,255,.5)" : hidden ? m.color : "#fff"; g.stroke(); }
   g.restore();
 }
