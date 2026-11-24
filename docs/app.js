@@ -462,6 +462,7 @@ window.onYouTubeIframeAPIReady = () => {
 function playIcon() { $("#playIcon").setAttribute("d", S.playing ? "M7 5h3.5v14H7zM13.5 5H17v14h-3.5z" : "M8 5v14l11-7z"); }
 function setT(t, seek) { S.t = Math.max(T0, Math.min(T1, t)); S.dirty = true; S.anchor = null; if (seek && S.ytReady) S.yt.seekTo(Math.max(0, S.t - S.off), true); }
 function frameUI(now) {
+  const dark = S.t < LIGHTS_ON; if (dark !== S.dark) { S.dark = dark; G.el.style.filter = dark ? "brightness(0.04)" : ""; }   // the whole stage, lines included
   S.dt = toData(S.t); render(now); nowZones(); nowMoment();
   $("#time").value = S.t; $("#clock").textContent = fmt(S.t); $("#head").style.left = `${(100 * (S.t - T0) / (T1 - T0)).toFixed(3)}%`;
 }
