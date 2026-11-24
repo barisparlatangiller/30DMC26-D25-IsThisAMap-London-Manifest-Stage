@@ -341,6 +341,23 @@ for nm, ks in K3.items():
         r[1] = round(r[1] + a * (float(np.interp(v, kt, kx)) - r[1]), 2); r[2] = round(r[2] + a * (float(np.interp(v, kt, ky)) - r[2]), 2)
         r[6] = "ana_sahne_on"
 
+# 7d) 2:46-2:59, with Barış (24 Nov): 2:46 a diagonal arrow, Hilal at the tip, Zeynep · Sueda · Esin going back to the left,
+#    Lidya and Mina back to the right. 2:50 Zeynep takes the tip, Hilal and Sueda behind her to the left, Esin last. 2:55 Lidya
+#    and Esin swap; Sueda goes to the very back, behind Zeynep.
+K4 = {   # (video s, x, y); the first key is where 7c leaves them
+    "Hilal":        [(166.5, 12.0, 7.3), (167.5, 12.0, 7.4), (169.5, 12.0, 7.4), (171.0, 10.6, 6.8)],
+    "Zeynep Oktay": [(166.5, 9.0, 6.0), (167.5, 10.6, 6.8), (169.5, 10.6, 6.8), (171.0, 12.0, 7.4)],
+    "Sueda":        [(166.5, 9.0, 5.0), (167.5, 9.2, 6.2), (174.5, 9.2, 6.2), (176.0, 12.0, 5.4)],
+    "Esin":         [(166.5, 9.0, 7.0), (167.5, 7.8, 5.6), (174.5, 7.8, 5.6), (176.0, 13.4, 6.8)],
+    "Lidya":        [(166.5, 15.0, 7.0), (167.5, 13.4, 6.8), (174.5, 13.4, 6.8), (176.0, 7.8, 5.6)],
+    "Mina":         [(166.5, 15.0, 6.0), (167.5, 14.8, 6.2)],
+}
+for nm, ks in K4.items():
+    kt = np.array([k[0] for k in ks]); kx = np.array([k[1] for k in ks]); ky = np.array([k[2] for k in ks])
+    for r, v in zip(byname[nm]["s"], _vt):
+        if not (166.5 <= v <= 179.5): continue
+        r[1] = round(float(np.interp(v, kt, kx)), 2); r[2] = round(float(np.interp(v, kt, ky)), 2); r[6] = "ana_sahne_on"
+
 # 8) every place sits on a corner of a 25 cm grid (24 Nov, with Barış). The grid is aligned with the national grid (EPSG:27700,
 #    multiples of 0.25 m), so the same corners can be snapped to in QGIS (layer › Digitizing › geometry precision 0.25).
 G25 = 0.25
