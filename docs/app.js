@@ -292,8 +292,8 @@ function resize() {
 }
 
 // who sings when (video seconds, with Barış, from the lyrics): Ajda Pekkan in white, the whole group in all six colours
-const SING = [[26, "ajda"], [58, ["Lidya", "Esin", "Mina"]], [89, ["Sueda", "Lidya"]], [106, ["Hilal", "Zeynep"]], [126, ["Esin", "Hilal"]],
-  [140, ["Mina", "Zeynep", "Sueda", "Lidya"]], [180, "ajda"], [222, "all"]];
+const SING = [[26, "ajda"], [112, ["Lidya", "Esin", "Mina"]], [137, ["Sueda", "Lidya"]], [157, ["Hilal", "Zeynep"]], [182, ["Esin", "Hilal"]],
+  [197, ["Mina", "Zeynep", "Sueda", "Lidya"]], [237, "ajda"], [262, "all"]];      // the lyrics start at 1:52 (Barış)
 function singerCols(t) {
   let cur = null; for (const q of SING) if (t >= q[0]) cur = q[1]; if (!cur) return null;
   if (cur === "ajda") return [0xfff1dc];
