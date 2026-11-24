@@ -18,11 +18,11 @@ await p.addStyleTag({ content: `.dock, .cast, .lower3, .fpkey, .plancard { displ
   #cv .n { display: block; font: 800 30px Manrope; margin-top: 4px; } #cv .n i { display: inline-block; width: 16px; height: 16px; border-radius: 50%; margin-right: 9px; box-shadow: 0 0 14px currentColor; background: currentColor; }
   #cv b { display: block; font: 800 60px/1.05 Manrope; letter-spacing: -.02em; color: #fff; }` });
 await p.evaluate(() => {
-  const M = n => S.d.members.find(m => m.name.startsWith(n)), su = M("Sueda"), hi = M("Hilal"), es = M("Esin");
+  const M = n => S.d.members.find(m => m.name.startsWith(n)), su = M("Sueda"), hi = M("Hilal");
   const d = document.createElement("div"); d.id = "cv"; document.body.appendChild(d);
   d.innerHTML = `<div class="q">Who owns the stage?</div>
-    <div class="c"><span class="l">The two edges</span><span class="n" style="color:${es.color}"><i></i>Esin &amp; Hilal</span><b>≈60%</b></div>
-    <div class="c"><span class="l">Side by side</span><span class="n" style="color:${hi.color}"><i></i>Hilal &amp; Zeynep</span><b>80%</b></div>
+    <div class="c"><span class="l">Centre stage</span><span class="n" style="color:${su.color}"><i></i>Sueda</span><b>46%</b></div>
+    <div class="c"><span class="l">Side by side</span><span class="n" style="color:${hi.color}"><i></i>Hilal &amp; Zeynep</span><b>79%</b></div>
     <div class="c"><span class="l">Most ground</span><span class="n" style="color:${su.color}"><i></i>Sueda</span><b>79 m</b></div>`;
   S.mode = "all"; S.heatKey = ""; G.view = "top";
   renderAt(296, { p: [0, 41, 0.2], t: [0, 0, -1.4] });
