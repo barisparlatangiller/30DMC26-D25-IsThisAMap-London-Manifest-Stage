@@ -32,7 +32,7 @@ let lastOn = ""; let CAP = [];
 const FRAMES = process.env.TEST ? process.env.TEST.split(",").map(v => Math.round(+v * FPS)) : [...Array(DUR * FPS).keys()];
 for (const n of FRAMES) {
   const s = n / FPS; let t, cam, view = "top", mode = "acc", on = "all";
-  if (s < 4) { t = 29 + s * 2.5; cam = camAt(CAM.close, CAM.front, e(cl(s, 1.2, 4))); view = "audience";
+  if (s < 4) { t = 24 + s * 2.2; cam = camAt(CAM.close, CAM.front, e(cl(s, 1.2, 4))); view = "audience";
     CAP = ["0:27", "Six on the platform", "Manifest, a six-member Turkish girl group, live at Wembley. Every 2 s of the song became a position on the stage."]; }
   else if (s < 11) { t = 80 + (s - 4) * 18; cam = camAt(CAM.front, CAM.plan, e(cl(s, 4, 5.5))); on = "su";
     CAP = ["1:05 – 3:42 · main stage", "Centre stage: Sueda", "With all six in view, she is closest to the centre line 46% of the time. She also walks the most: 79 m."]; }
