@@ -264,7 +264,7 @@ function buildScene() {
   // bloom
   const comp = new EffectComposer(r); comp.addPass(new RenderPass(scene, cam));
   G.bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.5, 0.5, 0.7); comp.addPass(G.bloom); comp.addPass(new OutputPass()); G.comp = comp;
-  setView(VID ? "audience" : "top", true);
+  setView("audience", true);            // the page opens from the audience (Barış)
 }
 
 // ── camera views ──
@@ -581,7 +581,7 @@ function story() {
 function tour(k) {
   const box = $("#tourbox");
   if (S.ytReady && S.playing) S.yt.pauseVideo(); S.playing = false; playIcon();
-  if (k < 0 || k > 2) { S.ts = -1; box.hidden = true; document.body.classList.remove("touring"); setOn(); setMode("acc"); setView("top"); return; }
+  if (k < 0 || k > 2) { S.ts = -1; box.hidden = true; document.body.classList.remove("touring"); setOn(); setMode("acc"); setView("audience"); return; }
   S.ts = k; box.hidden = false; document.body.classList.add("touring");
   const su = M("Sueda"), hi = M("Hilal"), c = m => `<b style="color:${m.color}">${m.name.split(" ")[0]}</b>`;
   const steps = [
