@@ -18,11 +18,11 @@ const e = k => k * k * (3 - 2 * k), cl = (x, a, b) => Math.max(0, Math.min(1, (x
 await p.evaluate(() => {
   const M = n => S.d.members.find(m => m.name.startsWith(n)); const su = M("Sueda"), hi = M("Hilal"), es = M("Esin");
   const o = document.createElement("div"); o.id = "outro"; document.body.appendChild(o);
-  o.innerHTML = `<h2>Who owns the stage?</h2><p style="margin:-6px 0 14px">Nobody alone: the lead changes hands. All six take their turn in front.</p>
-    <div class="r"><i style="background:${su.color};color:${su.color}"></i><span><b>Sueda</b>leads most often</span><em style="color:${su.color}">18%</em></div>
-    <div class="r"><i style="background:${hi.color};color:${hi.color}"></i><span><b>Hilal</b>covers the most ground</span><em style="color:${hi.color}">93 m</em></div>
-    <div class="r"><i style="background:${es.color};color:${es.color}"></i><span><b>Esin &amp; Lidya</b>stand side by side most</span><em style="color:${es.color}">57%</em></div>
-    <p>Manifest · Intro &amp; Hileli · OVO Arena Wembley. Positions read from the concert video. Interactive map: link in the post.</p>`;
+  o.innerHTML = `<h2>How do six people share one stage?</h2><p style="margin:-6px 0 14px;font-size:1.15em;color:#fff"><b>In turns.</b> The one in front keeps changing; all six take their turn.</p>
+    <div class="r" style="grid-template-columns:auto 1fr auto"><span style="white-space:nowrap">${S.d.members.map(m => `<i style="display:inline-block;width:14px;height:14px;border-radius:50%;margin-right:5px;background:${m.color};box-shadow:0 0 10px ${m.color}"></i>`).join("")}</span><span><b>In front, in turns</b>on the main stage</span><em style="color:#fff">14×</em></div>
+    <div class="r" style="grid-template-columns:auto 1fr auto"><span style="white-space:nowrap">${S.d.members.map(m => `<i style="display:inline-block;width:14px;height:14px;border-radius:50%;margin-right:5px;background:${m.color};box-shadow:0 0 10px ${m.color}"></i>`).join("")}</span><span><b>Walked together</b>the six, in one song</span><em style="color:#fff">430 m</em></div>
+    <div class="r" style="grid-template-columns:auto 1fr auto"><span style="white-space:nowrap">${S.d.members.map(m => `<i style="display:inline-block;width:14px;height:14px;border-radius:50%;margin-right:5px;background:${m.color};box-shadow:0 0 10px ${m.color}"></i>`).join("")}</span><span><b>New formations</b>all moving at once</span><em style="color:#fff">21×</em></div>
+    <p>Manifest · Hileli · London concert, OVO Arena Wembley. Positions read from the concert video. Interactive map: link in the post.</p>`;
   const b = document.createElement("div"); b.id = "tipb";
   b.style.cssText = "position:fixed;right:44px;top:372px;z-index:50;font:800 30px Manrope;padding:10px 20px;border-radius:999px;background:rgba(14,9,32,.82);border:1px solid rgba(255,255,255,.16);opacity:0;transition:opacity .25s";
   document.body.appendChild(b);
@@ -37,7 +37,7 @@ let lastOn = ""; let CAP = [];
 const FRAMES = process.env.TEST ? process.env.TEST.split(",").map(v => Math.round(+v * FPS)) : [...Array(DUR * FPS).keys()];
 CAM.tilt = { p: [0, 33, 15], t: [0, 0, -0.5] };
 const SEG = [[5.5, 10.5, 55, "0:55 – 1:10", "Down the stairs, into a V", "Lidya and Sueda lead the way down; at 1:06 Sueda takes the tip of the V."],
-  [10.5, 23.8, 126, "2:06 – 2:46", "The tip changes hands", "A triangle, an arrow, pairs on the sides. At 2:32 Hilal crosses to the far left and comes back."],
+  [10.5, 23.8, 126, "2:06 – 2:46", "The one in front keeps changing", "A triangle, an arrow, pairs on the sides. At 2:32 Hilal crosses to the far left and comes back."],
   [23.8, 31.1, 210, "3:30 – 3:52", "One line, then the run", "Zeynep, then Lidya at the tip; at 3:37 one straight line, at 3:42 the run to the front block."]];
 for (const n of FRAMES) {
   const s = n / FPS; let t, cam, view = "top", mode = "acc", tip = false;

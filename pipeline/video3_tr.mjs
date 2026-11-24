@@ -18,17 +18,17 @@ const e = k => k * k * (3 - 2 * k), cl = (x, a, b) => Math.max(0, Math.min(1, (x
 await p.evaluate(() => {
   const M = n => S.d.members.find(m => m.name.startsWith(n)); const su = M("Sueda"), hi = M("Hilal"), es = M("Esin");
   const o = document.createElement("div"); o.id = "outro"; document.body.appendChild(o);
-  o.innerHTML = `<h2>Sahne kimin?</h2><p style="margin:-6px 0 14px;font-size:1.15em;color:#fff"><b>Tek bir kişinin değil.</b> Liderlik el değiştiriyor, altısı da sırayla öne geçiyor.</p>
-    <div class="r"><i style="background:${su.color};color:${su.color}"></i><span><b>Sueda</b>en sık önde</span><em style="color:${su.color}">%18</em></div>
-    <div class="r"><i style="background:${hi.color};color:${hi.color}"></i><span><b>Hilal</b>en çok yol yürüyen</span><em style="color:${hi.color}">93 m</em></div>
-    <div class="r"><i style="background:${es.color};color:${es.color}"></i><span><b>Esin &amp; Lidya</b>en çok yan yana</span><em style="color:${es.color}">%57</em></div>
-    <p>Manifest · Intro &amp; Hileli · OVO Arena Wembley. Konumlar konser videosundan okundu. İnteraktif harita: linki postta.</p>`;
+  o.innerHTML = `<h2>Altı kişi bir sahneyi nasıl paylaşır?</h2><p style="margin:-6px 0 14px;font-size:1.15em;color:#fff"><b>Sırayla.</b> Önde duran sürekli değişiyor; altısı da öne çıkıyor.</p>
+    <div class="r" style="grid-template-columns:auto 1fr auto"><span style="white-space:nowrap">${S.d.members.map(m => `<i style="display:inline-block;width:14px;height:14px;border-radius:50%;margin-right:5px;background:${m.color};box-shadow:0 0 10px ${m.color}"></i>`).join("")}</span><span><b>Sırayla önde</b>ana sahnede önde duran değişiyor</span><em style="color:#fff">14 kez</em></div>
+    <div class="r" style="grid-template-columns:auto 1fr auto"><span style="white-space:nowrap">${S.d.members.map(m => `<i style="display:inline-block;width:14px;height:14px;border-radius:50%;margin-right:5px;background:${m.color};box-shadow:0 0 10px ${m.color}"></i>`).join("")}</span><span><b>Birlikte yürüdükleri</b>tek şarkıda, altısı toplam</span><em style="color:#fff">430 m</em></div>
+    <div class="r" style="grid-template-columns:auto 1fr auto"><span style="white-space:nowrap">${S.d.members.map(m => `<i style="display:inline-block;width:14px;height:14px;border-radius:50%;margin-right:5px;background:${m.color};box-shadow:0 0 10px ${m.color}"></i>`).join("")}</span><span><b>Yeni dizilim</b>hep birlikte yer değiştiriyorlar</span><em style="color:#fff">21 kez</em></div>
+    <p>Manifest · Hileli · Londra konseri, OVO Arena Wembley. Konumlar konser videosundan okundu. İnteraktif harita: linki postta.</p>`;
   const b = document.createElement("div"); b.id = "tipb";
   b.style.cssText = "position:fixed;right:44px;top:372px;z-index:50;font:800 30px Manrope;padding:10px 20px;border-radius:999px;background:rgba(14,9,32,.82);border:1px solid rgba(255,255,255,.16);opacity:0;transition:opacity .25s";
   document.body.appendChild(b);
   const hk = document.createElement("div"); hk.id = "hook";
   hk.style.cssText = "position:fixed;left:60px;right:60px;top:300px;z-index:60;text-align:center;padding:34px 10px 40px;border-radius:36px;background:rgba(10,7,22,.72);backdrop-filter:blur(10px);font:800 92px/1.04 Manrope;letter-spacing:-.03em;color:#fff;text-shadow:0 6px 40px rgba(0,0,0,.8)";
-  hk.innerHTML = `Manifest<br>sahnedeyken<br><span style="background:linear-gradient(90deg,#9b6bff,#ff5fb4,#ffc928,#21c47a,#3d8bff);-webkit-background-clip:text;color:transparent">liderlik kimde?</span>`;
+  hk.innerHTML = `Altı kişi<br>bir sahneyi<br><span style="background:linear-gradient(90deg,#9b6bff,#ff5fb4,#ffc928,#21c47a,#3d8bff);-webkit-background-clip:text;color:transparent">nasıl paylaşır?</span><div style="font:700 34px Manrope;letter-spacing:0;margin-top:18px;color:#d9d0f2">Manifest · <i>Hileli</i> · Londra konseri</div>`;
   document.body.appendChild(hk);
   window.tipAt = () => { const dt = toData(S.t), ps = S.d.members.map(m => [m, pos(m, dt)]).sort((a, c) => c[1].y - a[1].y);
     return ps[0][1].y - ps[1][1].y > 0.3 ? ps[0][0] : null; };
@@ -40,9 +40,9 @@ const ff = spawn("ffmpeg", ["-y", "-loglevel", "error", "-f", "image2pipe", "-fr
 let lastOn = ""; let CAP = [];
 const FRAMES = process.env.TEST ? process.env.TEST.split(",").map(v => Math.round(+v * FPS)) : [...Array(DUR * FPS).keys()];
 CAM.tilt = { p: [0, 33, 15], t: [0, 0, -0.5] };
-const SEG = [[5.5, 10.5, 55, "0:55 – 1:10", "Merdivenden V'ye", "Önce Lidya ve Sueda iniyor; 1:06'da V'nin ucuna Sueda geçiyor."],
-  [10.5, 23.8, 126, "2:06 – 2:46", "Uç el değiştiriyor", "Üçgen, ok, kenarlarda çiftler. 2:32'de Hilal sol uca gidip geri dönüyor."],
-  [23.8, 31.1, 210, "3:30 – 3:52", "Tek sıra, sonra koşu", "Uçta önce Zeynep, sonra Lidya; 3:37'de tek düz sıra, 3:42'de ön bloğa koşu."]];
+const SEG = [[5.5, 10.5, 55, "0:55 – 1:10", "Merdivenden V'ye", "Önce Lidya ve Sueda iniyor; 1:06'da V'nin önüne Sueda geçiyor."],
+  [10.5, 23.8, 126, "2:06 – 2:46", "Önde duran sürekli değişiyor", "Üçgen, ok, kenarlarda çiftler. 2:32'de Hilal sol uca gidip geri dönüyor."],
+  [23.8, 31.1, 210, "3:30 – 3:52", "Tek sıra, sonra koşu", "Önde önce Zeynep, sonra Lidya; 3:37'de tek düz sıra, 3:42'de ön bloğa koşu."]];
 for (const n of FRAMES) {
   const s = n / FPS; let t, cam, view = "top", mode = "acc", tip = false;
   const sg = SEG.find(q => s >= q[0] && s < q[1]);

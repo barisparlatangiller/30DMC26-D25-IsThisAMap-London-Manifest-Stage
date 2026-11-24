@@ -471,8 +471,8 @@ def moments(d):
                 "text": f"At {fm(T[k1])} the line is at its widest: on average {spread[k1]:.1f} m from the centre, {spread[k1] / spread[k0]:.0f} times wider than at the opening."})
     walk = sorted(((m["path_m"], first(m)) for m in M), reverse=True)
     hid = sorted(((int((~V[i]).sum() * 2), first(m)) for i, m in enumerate(M)), reverse=True)
-    out.append({"t": None, "title": "Who covers the most ground",
-                "text": f"{walk[0][1]} walks {walk[0][0]:.0f} m, {walk[-1][1]} {walk[-1][0]:.0f} m."})
+    out.append({"t": None, "title": "Walked together",
+                "text": f"Together the six walk {sum(w for w, _ in walk):.0f} m in one song."})
     for o in out:
         if o["t"] is not None:
             o["t"] = round(vw(o["t"]), 1)
@@ -489,11 +489,14 @@ def relations(d):
     M = d["members"]; n = len(M); first = lambda m: m["name"].split(" ")[0]
     P = np.array([[[s[1], s[2]] for s in m["s"]] for m in M]); V = np.array([[s[5] != "g" for s in m["s"]] for m in M])
     allv = np.array([vw(t) >= 45.3 for t in (s[0] for s in M[0]["s"])])     # every position is now read from the video: use them all
-    lead = np.zeros(n); nl = 0
+    lead = np.zeros(n); nl = 0; seq = []
     for k, t in enumerate(s[0] for s in M[0]["s"]):           # the tip of the formation on the main stage, 1:04-3:42
         if not (64 <= vw(t) <= 222): continue
         nl += 1; y = np.sort(P[:, k, 1])
-        if y[-1] - y[-2] > 0.3: lead[np.argmax(P[:, k, 1])] += 1
+        if y[-1] - y[-2] > 0.3:
+            i_ = int(np.argmax(P[:, k, 1])); lead[i_] += 1
+            if not seq or seq[-1] != i_: seq.append(i_)
+    nchg = len(seq) - 1
     front = np.zeros(n); centre = np.zeros(n); nb = np.zeros((n, n)); side = np.zeros(n); cnt = 0
     for k in np.where(allv)[0]:
         cnt += 1
@@ -515,7 +518,7 @@ def relations(d):
     lineup = " · ".join(first(m) for m in sorted(M, key=lambda m: m["rel"]["lr"]))
     facts = [
         {"t": None, "title": "The line-up", "text": f"Seen from the audience, left to right, the average order is {lineup}; the formations reshuffle it all the time."},
-        {"t": None, "title": "The lead changes hands", "text": "On the main stage the tip of the formation keeps moving: " + ", ".join(f"{first(m)} {m['rel']['lead_pct']}%" for m in sorted(M, key=lambda m: -m["rel"]["lead_pct"])) + " of the time. All six take their turn in front."},
+        {"t": None, "title": "In front, in turns", "text": f"On the main stage the one in front changes {nchg} times, and all six take their turn. Nobody owns the stage; they share it."},
     ]
     if pairs:
         facts.append({"t": None, "title": "Always side by side",
@@ -553,13 +556,12 @@ def to_tr(m):
         return "Seyircinin önünde", f"{_loc(n[0], True)} sona kadar altısı seyirciye en yakın ön blokta ({n[1]} sn)."
     if t == "Widest formation":
         return "En geniş dizilim", f"{_loc(n[0])} sıra en geniş halinde: merkezden ortalama {n[1]} m, açılıştakinden {n[2]} kat geniş."
-    if t == "Who covers the most ground":
-        a = re.findall(r"(\w+) walks (\d+) m, (\w+) (\d+) m", x)[0]
-        return "En çok yol", f"{a[0]} {a[1]} m yürüyor, {a[2]} {a[3]} m."
+    if t == "Walked together":
+        return "Birlikte yürüdükleri", f"Altısı tek şarkıda birlikte {n[0]} m yürüyor."
     if t == "The line-up":
         return "Sıralama", "Seyirciden bakınca soldan sağa ortalama sıra " + x.split("order is ")[1].split(";")[0] + "; dizilimler bu sırayı sürekli karıştırıyor."
-    if t == "The lead changes hands":
-        return "Liderlik el değiştiriyor", "Ana sahnede dizilimin ucu sürekli el değiştiriyor: " + x.split("moving: ")[1].split(" of the time")[0].replace("%", "") .replace(", ", "%, ").rstrip() + "%. Altısı da sırayla öne geçiyor."
+    if t == "In front, in turns":
+        return "Sırayla önde", f"Ana sahnede öndeki kişi {n[0]} kez değişiyor; altısı da sırayla öne çıkıyor. Sahne kimsenin değil, paylaşılıyor."
     if t == "Always side by side":
         return "Hep yan yana", x.split(" are each other")[0].replace(" and ", " ve ") + " şarkının çoğunda birbirinin en yakın komşusu."
     return t, x

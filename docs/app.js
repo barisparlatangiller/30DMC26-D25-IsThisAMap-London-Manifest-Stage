@@ -394,7 +394,7 @@ function analysis() {
   const stats = ms.map(m => ({ m, c: centre(m), f: front(m), d: distOf(m), lx: m.s.reduce((a, s) => a + s[1], 0) / m.s.length }));
   const rank = (key, i) => 1 + stats.filter(o => o[key] > stats[i][key]).length;
   $("#who").innerHTML = ms.map((m, i) => `<div class="wc"><h4><i style="background:${m.color}"></i>${m.name}</h4><canvas id="wp-${m.key}"></canvas>
-    <div class="chips"><span><b>${(100 * stats[i].c).toFixed(0)}%</b>${LT("centre stage", "sahne ortası")}<em>#${rank("c", i)}</em></span><span><b>${(100 * stats[i].f).toFixed(0)}%</b>${LT("at the front", "önde")}<em>#${rank("f", i)}</em></span><span><b>${Math.round(stats[i].d)} m</b>${LT("walked", "yürüdü")}<em>#${rank("d", i)}</em></span></div>
+    <div class="chips"><span><b>${(100 * stats[i].c).toFixed(0)}%</b>${LT("centre stage", "sahne ortası")}</span><span><b>${(100 * stats[i].f).toFixed(0)}%</b>${LT("at the front", "önde")}</span><span><b>${Math.round(stats[i].d)} m</b>${LT("walked", "yürüdü")}</span></div>
     <p id="ws-${m.key}"></p></div>`).join("");
   ms.forEach((m, i) => {
     const W = 260, g = hiDPI($(`#wp-${m.key}`), W, W), sc = W / S.d.w; g.fillStyle = "#0b0819"; g.fillRect(0, 0, W, W); stageOutline(g, sc, 0, 0, 0.3);
@@ -413,9 +413,9 @@ function analysis() {
   const by = key => [...stats].sort((a, b) => b[key] - a[key]);
   const L = by("lx").slice(-1)[0], Rr = by("lx")[0];
   $("#finds").innerHTML = [
-    `<b style="color:${by("c")[0].m.color}">${short(by("c")[0].m)}</b> ${LT(`holds the centre most: ${(100 * by("c")[0].c).toFixed(0)}% of the song between the centre lines.`, `ortada en çok duran: şarkının %${(100 * by("c")[0].c).toFixed(0)}'i orta çizgiler arasında.`)}`,
-    `<b style="color:${L.m.color}">${short(L.m)}</b> ${LT("lives on the left,", "solda,")} <b style="color:${Rr.m.color}">${short(Rr.m)}</b> ${LT("on the right: the two edges of the line.", "sağda: sıranın iki ucu.")}`,
-    `<b style="color:${by("d")[0].m.color}">${short(by("d")[0].m)}</b> ${LT(`covers the most ground, about ${Math.round(by("d")[0].d)} m.`, `en çok yol yürüyen, yaklaşık ${Math.round(by("d")[0].d)} m.`)}`].map(t => `<div>${t}</div>`).join("");
+    LT(`Nobody owns the stage: on the main stage the one in front changes 14 times and all six take their turn.`, `Sahne kimsenin değil: ana sahnede öndeki kişi 14 kez değişiyor, altısı da sırayla öne çıkıyor.`),
+    `<b style="color:${L.m.color}">${short(L.m)}</b> ${LT("mostly works the left end of the line,", "sıranın daha çok sol ucunda,")} <b style="color:${Rr.m.color}">${short(Rr.m)}</b> ${LT("the right end.", "sağ ucunda.")}`,
+    LT(`Together the six walk about ${Math.round(stats.reduce((a, o) => a + o.d, 0))} m in one song.`, `Altısı tek şarkıda birlikte yaklaşık ${Math.round(stats.reduce((a, o) => a + o.d, 0))} m yürüyor.`)].map(t => `<div>${t}</div>`).join("");
 }
 
 // the flat plan (top view), drawn next to the 3D stage
@@ -561,20 +561,21 @@ function setOn(keys) {
 }
 function setMode(md) { document.querySelectorAll(".modes button").forEach(x => x.classList.toggle("on", x.dataset.mode === md)); S.mode = md; S.dirty = true; }
 const M = n => S.d.members.find(m => m.name.startsWith(n));
+// three numbers about the six together, none of them a ranking (Barış, 24 Nov: the question is how the stage is shared)
 const FIND = TR ? [
-  { k: "Sueda", lab: "Liderlik el değiştiriyor", big: "%18", txt: "Ana sahnede en sık önde Sueda; altısı da sırayla uca geçiyor (Esin, Zeynep %12, Hilal %10, Mina, Lidya %8)" },
-  { k: "Hilal", lab: "En çok yol", big: "93 m", txt: "bir şarkıda yürüdü: 2:32'de sol uca gidip geri dönüyor (Mina: 64 m)" },
-  { k: "Esin", k2: "Lidya", lab: "Yan yana", big: "%57", txt: "şarkının bu kadarında Esin'in en yakın komşusu Lidya" }] : [
-  { k: "Sueda", lab: "The lead changes hands", big: "18%", txt: "Sueda leads most often on the main stage; all six take the tip (Esin, Zeynep 12%, Hilal 10%, Mina, Lidya 8%)" },
-  { k: "Hilal", lab: "Most ground", big: "93 m", txt: "walked in one song, out to the far left at 2:32 and back (Mina: 64 m)" },
-  { k: "Esin", k2: "Lidya", lab: "Side by side", big: "57%", txt: "of the song Esin's nearest neighbour is Lidya" }];
+  { lab: "Sırayla önde", big: "14 kez", txt: "ana sahnede önde duran kişi değişiyor; altısı da öne çıkıyor", v: "top", md: "all", t: 222 },
+  { lab: "Birlikte yürüdükleri", big: "430 m", txt: "altısının tek şarkıda toplam yolu", v: "top", md: "all", t: 296 },
+  { lab: "Yeni dizilim", big: "21 kez", txt: "hep birlikte yer değiştirip yeni bir dizilime geçiyorlar", v: "audience", md: "acc", t: 150 }] : [
+  { lab: "In front, in turns", big: "14×", txt: "the one in front on the main stage keeps changing; all six take a turn", v: "top", md: "all", t: 222 },
+  { lab: "Walked together", big: "430 m", txt: "the six together, in one song", v: "top", md: "all", t: 296 },
+  { lab: "New formations", big: "21×", txt: "they all move at once into a new formation", v: "audience", md: "acc", t: 150 }];
 function story() {
-  $("#fcards").innerHTML = FIND.map((f, i) => { const m = M(f.k); return `<button class="fcard" data-i="${i}" style="--c:${m.color}">
-    <span class="lab">${f.lab}</span><span class="nm"><i></i>${m.name.split(" ")[0]}${f.k2 ? ` & ${f.k2}` : ""}</span><b>${f.big}</b><span class="tx">${f.txt}</span></button>`; }).join("");
+  $("#fcards").innerHTML = FIND.map((f, i) => `<button class="fcard" data-i="${i}" style="--c:#e9e2ff">
+    <span class="lab">${f.lab}</span><span class="nm six">${S.d.members.map(m => `<i style="background:${m.color};box-shadow:0 0 8px ${m.color}"></i>`).join("")}</span><b>${f.big}</b><span class="tx">${f.txt}</span></button>`).join("");
   document.querySelectorAll(".fcard").forEach(b => b.onclick = () => {
     const f = FIND[+b.dataset.i], on = b.classList.toggle("on");
     document.querySelectorAll(".fcard").forEach(x => x !== b && x.classList.remove("on"));
-    if (on) { setOn([M(f.k).key, ...(f.k2 ? [M(f.k2).key] : [])]); setMode("all"); setView("top"); } else { setOn(); setMode("acc"); }
+    setOn(); if (on) { setT(f.t, true); setMode(f.md); setView(f.v); } else { setMode("acc"); }
   });
   $("#tour").onclick = () => tour(0); $("#tnext").onclick = () => tour(S.ts + 1); $("#tback").onclick = () => tour(S.ts - 1); $("#tclose").onclick = () => tour(-1);
 }
@@ -587,10 +588,10 @@ function tour(k) {
   const steps = [
     { t: 28, v: "audience", on: null, md: "acc", txt: LT(`0:27 · Out of the dark, <b>six silhouettes on a raised platform</b>, 3.3 m up. At 0:45 the light shows who is who. Lidya and Sueda lead the way down the stairs at 0:57. Each colour is one member; wherever she stands still, a circle grows.`,
       `0:27 · Karanlıktan <b>yükseltilmiş platformda altı siyah siluet</b> çıkıyor, 3,3 m yukarıda. 0:45'te ışık kimin kim olduğunu gösteriyor. 0:57'de merdivenden ilk Lidya ve Sueda iniyor. Her renk bir üye; durduğu yerde bir daire büyüyor.`) },
-    { t: 222, v: "top", on: null, md: "all", txt: LT(`1:04–3:42 · The main stage. The formation keeps changing and so does its tip: <b>all six take their turn in front</b>. ${c(su)} most often (18%), then ${c(M("Esin"))} and ${c(M("Zeynep"))} (12%), ${c(hi)} (10%), ${c(M("Mina"))} and ${c(M("Lidya"))} (8%).`,
-      `1:04–3:42 · Ana sahne. Dizilim sürekli değişiyor, ucu da: <b>altısı da sırayla öne geçiyor</b>. En sık ${c(su)} (%18), sonra ${c(M("Esin"))} ve ${c(M("Zeynep"))} (%12), ${c(hi)} (%10), ${c(M("Mina"))} ve ${c(M("Lidya"))} (%8).`) },
-    { t: 270, v: "top", on: [hi.key], md: "all", txt: LT(`${c(hi)} walks the most, <b>93 m</b>: at 2:32 she crosses to the far left end of the line and at 2:41 comes back to the middle. From 3:48 all six hold the front block, in a zigzag from 4:25. Press play to watch it with the video, or tap a name below.`,
-      `En çok ${c(hi)} yürüyor, <b>93 m</b>: 2:32'de sıranın sol ucuna geçiyor, 2:41'de ortaya dönüyor. 3:48'den itibaren altısı ön blokta, 4:25'ten sonra zigzag halinde. Videoyla birlikte izlemek için oynat ya da aşağıdan bir isme dokun.`) }];
+    { t: 222, v: "top", on: null, md: "all", txt: LT(`1:04–3:42 · The main stage. The formation keeps changing and so does the one in front: <b>14 times</b>, and all six take their turn. Nobody owns the stage; they share it.`,
+      `1:04–3:42 · Ana sahne. Dizilim sürekli değişiyor, öndeki kişi de: <b>14 kez</b>, altısı da sırayla öne çıkıyor. Sahne kimsenin değil; paylaşılıyor.`) },
+    { t: 270, v: "top", on: null, md: "all", txt: LT(`3:42 · The run to the front block, then a zigzag and the final pose shoulder to shoulder. Together the six walk <b>430 m</b> in one song. Press play to watch it with the video, or tap a name below.`,
+      `3:42 · Ön bloğa koşu, ardından zigzag ve omuz omuza final. Altısı tek şarkıda birlikte <b>430 m</b> yürüyor. Videoyla birlikte izlemek için oynat ya da aşağıdan bir isme dokun.`) }];
   const st = steps[k]; setT(st.t, true); setView(st.v); setOn(st.on); setMode(st.md);
   $("#tstep").textContent = `${LT("Tour", "Tur")} · ${k + 1} / 3`; $("#ttext").innerHTML = st.txt;
   $("#tback").disabled = k === 0; $("#tnext").textContent = k === 2 ? LT("explore ✓", "keşfet ✓") : LT("next →", "ileri →");
