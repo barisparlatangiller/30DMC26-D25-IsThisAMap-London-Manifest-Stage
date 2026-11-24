@@ -489,7 +489,7 @@ function loop(now) {
 window.renderAt = (t, cam) => { S.t = t; if (cam) { G.fly = null; G.ctl.autoRotate = false; G.cam.position.set(...cam.p); G.ctl.target.set(...cam.t); } frameUI(t * 1000); };
 
 async function init() {
-  S.d = await fetch("data/stage.json?v=23").then(r => r.json());
+  S.d = await fetch("data/stage.json?v=24").then(r => r.json());
   for (const m of S.d.members) { m.pastel = m.color; m.color = VIVID[m.key] || m.color; }
   S.on = new Set(S.d.members.map(m => m.key));
   S.STOPS = stops();
