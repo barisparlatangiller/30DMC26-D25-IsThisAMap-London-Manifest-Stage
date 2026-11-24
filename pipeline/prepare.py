@@ -358,6 +358,25 @@ for nm, ks in K4.items():
         if not (166.5 <= v <= 179.5): continue
         r[1] = round(float(np.interp(v, kt, kx)), 2); r[2] = round(float(np.interp(v, kt, ky)), 2); r[6] = "ana_sahne_on"
 
+# 7e) 2:59-3:42, with Barış (24 Nov). 3:00 Esin takes Zeynep's place at the tip, Sueda behind her to the right; by 3:04
+#    Zeynep is at the back behind Esin. 3:08 Hilal passes behind Lidya and comes out at the tip between Lidya and Esin. 3:13
+#    Esin drops back to Lidya's left, Mina passes behind Hilal to the tip with Zeynep behind her; Hilal and Sueda to the right.
+#    3:24 Mina and Zeynep swap, Zeynep at the tip until 3:33. 3:34 Esin · Mina · Lidya (tip) · Sueda · Zeynep · Hilal.
+#    3:37 all six step forward into one straight line at the front of the main stage; at 3:42 they walk down the runway.
+K5 = {
+    "Lidya":        [(179.5, 7.8, 5.6), (186.0, 7.8, 5.6), (188.0, 10.4, 6.6), (192.0, 10.4, 6.6), (194.0, 10.4, 6.4), (212.5, 10.4, 6.4), (214.0, 12.0, 7.4), (216.0, 12.0, 7.4), (217.5, 11.0, 7.6)],
+    "Hilal":        [(179.5, 10.6, 6.8), (186.5, 10.6, 6.8), (187.5, 8.6, 5.0), (189.0, 12.0, 7.4), (192.0, 12.0, 7.4), (194.0, 13.6, 6.6), (212.5, 13.6, 6.6), (214.0, 17.4, 4.8), (216.0, 17.4, 4.8), (217.5, 17.0, 7.6)],
+    "Esin":         [(179.5, 13.4, 6.8), (180.5, 12.0, 7.4), (188.0, 12.0, 7.4), (189.0, 13.6, 6.6), (192.0, 13.6, 6.6), (194.0, 8.8, 5.6), (212.5, 8.8, 5.6), (214.0, 8.4, 5.6), (216.0, 8.4, 5.6), (217.5, 7.0, 7.6)],
+    "Zeynep Oktay": [(179.5, 12.0, 7.4), (180.5, 12.0, 6.6), (183.0, 12.0, 6.6), (184.0, 12.0, 5.6), (188.0, 12.0, 5.6), (189.0, 13.6, 5.6), (192.0, 13.6, 5.6), (194.0, 12.0, 6.2), (203.5, 12.0, 6.2), (204.5, 12.0, 7.4), (212.5, 12.0, 7.4), (214.0, 15.6, 5.6), (216.0, 15.6, 5.6), (217.5, 15.0, 7.6)],
+    "Sueda":        [(179.5, 12.0, 5.4), (180.5, 13.2, 6.6), (188.0, 13.2, 6.6), (189.0, 15.2, 5.8), (212.5, 15.2, 5.8), (214.0, 13.8, 6.5), (216.0, 13.8, 6.5), (217.5, 13.0, 7.6)],
+    "Mina":         [(179.5, 14.8, 6.2), (188.0, 14.8, 6.2), (189.0, 16.8, 5.0), (192.0, 16.8, 5.0), (194.0, 12.0, 7.4), (203.5, 12.0, 7.4), (204.5, 12.0, 6.2), (212.5, 12.0, 6.2), (214.0, 10.2, 6.5), (216.0, 10.2, 6.5), (217.5, 9.0, 7.6)],
+}
+for nm, ks in K5.items():
+    kt = np.array([k[0] for k in ks]); kx = np.array([k[1] for k in ks]); ky = np.array([k[2] for k in ks])
+    for r, v in zip(byname[nm]["s"], _vt):
+        if not (179.5 < v < 222.0): continue
+        r[1] = round(float(np.interp(v, kt, kx)), 2); r[2] = round(float(np.interp(v, kt, ky)), 2); r[6] = "ana_sahne_on"
+
 # 8) every place sits on a corner of a 25 cm grid (24 Nov, with Barış). The grid is aligned with the national grid (EPSG:27700,
 #    multiples of 0.25 m), so the same corners can be snapped to in QGIS (layer › Digitizing › geometry precision 0.25).
 G25 = 0.25
