@@ -277,6 +277,14 @@ for va, vb, span in SPREAD:
         for j, m in enumerate(sorted(members, key=lambda m: m["s"][k][1])):
             r = m["s"][k]; tx = min(23.0, max(1.0, c + (j - 2.5) * span / 5)); r[1] = round(r[1] + a * (tx - r[1]), 2)
 
+# 8) every place sits on a corner of a 25 cm grid (24 Nov, with Barış). The grid is aligned with the national grid (EPSG:27700,
+#    multiples of 0.25 m), so the same corners can be snapped to in QGIS (layer › Digitizing › geometry precision 0.25).
+G25 = 0.25
+for m in members:
+    for r in m["s"]:
+        X = round((X0 + r[2]) / G25) * G25; Y = round((Y0 + r[1]) / G25) * G25      # local → EPSG:27700, snapped
+        r[1], r[2] = round(Y - Y0, 3), round(X - X0, 3)
+
 out = {"w": round(W, 2), "h": round(H, 2), "parts": parts, "members": members,
        "t0": int(pts.saniye.min()), "t1": int(pts.saniye.max()), "step": 2,
        "video": "YGtNsXgYqjo", "states": {"n": "clear", "y": "approximate", "s": "silhouette", "g": "not visible"},

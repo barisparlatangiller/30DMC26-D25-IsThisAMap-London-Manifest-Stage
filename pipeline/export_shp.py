@@ -19,9 +19,16 @@ for m in d["members"]:
         v = vid(t)
         rows.append({"isim": m["name"], "sira": k, "veri_sn": t, "video_sn": round(v, 1), "video": f"{int(v // 60)}:{v % 60:04.1f}",
                      "bolge": ZTR.get(s[6], s[6]), "durum": ST.get(s[5], s[5]), "z_m": z, "x_yerel": x, "y_yerel": y,
-                     "geometry": Point(X0 + y, Y0 + x)})            # inverse of prepare.rot: x' = Y - Y0, y' = X - X0
+                     "geometry": Point(round(X0 + y, 3), round(Y0 + x, 3))})            # inverse of prepare.rot: x' = Y - Y0, y' = X - X0
     g = gpd.GeoDataFrame(rows, crs="EPSG:27700")
     fn = m["name"].split(" ")[0]
     g.to_file(out / f"{fn}.shp", encoding="utf-8")
     print(fn, len(g))
+# the 25 cm grid every place is snapped to (multiples of 0.25 m in EPSG:27700), and a 1 m grid to read it
+from shapely.geometry import LineString
+bx = shapely.union_all(list(stage.geometry) + list(plat.geometry)).bounds
+for step, fn in ((0.25, "Grid_25cm"), (1.0, "Grid_1m")):
+    a0, a1 = np.floor(bx[0] / step) * step, np.ceil(bx[2] / step) * step; b0, b1 = np.floor(bx[1] / step) * step, np.ceil(bx[3] / step) * step
+    ls = [LineString([(x, b0), (x, b1)]) for x in np.arange(a0, a1 + step / 2, step)] + [LineString([(a0, y), (a1, y)]) for y in np.arange(b0, b1 + step / 2, step)]
+    gpd.GeoDataFrame({"adim_m": [step] * len(ls)}, geometry=ls, crs="EPSG:27700").to_file(out / f"{fn}.shp", encoding="utf-8")
 stage.to_file(out / "Sahne.shp", encoding="utf-8"); plat.to_file(out / "Sahne_Merdiven.shp", encoding="utf-8")

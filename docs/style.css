@@ -219,3 +219,5 @@ body.vid .lower3 { width: auto; }
 #outro h2 { font: 800 46px/1.05 Manrope; margin: 0 0 22px; letter-spacing: -.02em; } #outro .r { display: grid; grid-template-columns: 40px 1fr auto; align-items: center; gap: 16px; padding: 14px 0; border-top: 1px solid var(--edge); }
 #outro .r i { width: 30px; height: 30px; border-radius: 50%; box-shadow: 0 0 18px currentColor; } #outro .r span { font-size: 24px; color: var(--ink2); } #outro .r span b { display: block; font: 800 30px Manrope; color: var(--ink); }
 #outro .r em { font: 800 44px Manrope; font-style: normal; } #outro p { font-size: 21px; color: var(--ink3); margin: 18px 0 0; }
+.speed { display: flex; gap: 2px; padding: 3px; border-radius: 99px; border: 1px solid var(--edge); } .speed button { border: 0; background: transparent; color: var(--ink2); font: 700 12px Manrope; padding: 6px 9px; border-radius: 99px; cursor: pointer; }
+.speed button.on { background: rgba(255,255,255,.9); color: #140c2b; } body.vid .speed { display: none; }

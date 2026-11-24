@@ -478,14 +478,14 @@ function loop(now) {
   } else if (S.ytReady && S.yt.getCurrentTime && !S.scrubbing) {
     const vt = S.yt.getCurrentTime() + S.off; if (Math.abs(vt - S.t) > 0.3 && S.yt.getPlayerState() === 2 && vt > T0 - 1) S.t = vt;   // paused: follow the player's position
     S.anchor = null;
-  } else if (!S.ytReady && S.playing) { S.t += dt; if (S.t >= T1) { S.playing = false; playIcon(); } }
+  } else if (!S.ytReady && S.playing) { S.t += dt * (S.rate || 1); if (S.t >= T1) { S.playing = false; playIcon(); } }
   frameUI(now);
   if (!VID) requestAnimationFrame(loop);
 }
 window.renderAt = (t, cam) => { S.t = t; if (cam) { G.fly = null; G.ctl.autoRotate = false; G.cam.position.set(...cam.p); G.ctl.target.set(...cam.t); } frameUI(t * 1000); };
 
 async function init() {
-  S.d = await fetch("data/stage.json?v=20").then(r => r.json());
+  S.d = await fetch("data/stage.json?v=21").then(r => r.json());
   for (const m of S.d.members) { m.pastel = m.color; m.color = VIVID[m.key] || m.color; }
   S.on = new Set(S.d.members.map(m => m.key));
   S.STOPS = stops();
@@ -507,6 +507,9 @@ async function init() {
   const setOff = v => { S.off = Math.max(-6, Math.min(6, v)); $("#offv").textContent = `${S.off > 0 ? "+" : ""}${S.off.toFixed(1)} s`; S.anchor = null; };
   $("#nudgeM").onclick = () => setOff(S.off - 0.5); $("#nudgeP").onclick = () => setOff(S.off + 0.5);
   $("#vmin").onclick = () => { $("#vcard").classList.toggle("min"); $("#vmin").textContent = $("#vcard").classList.contains("min") ? "+" : "–"; };
+  document.querySelectorAll(".speed button").forEach(b => b.onclick = () => {      // slow motion, to compare with the video
+    S.rate = +b.dataset.r; document.querySelectorAll(".speed button").forEach(x => x.classList.toggle("on", x === b));
+    if (S.ytReady && S.yt.setPlaybackRate) S.yt.setPlaybackRate(S.rate); S.anchor = null; });
   $("#anaBtn").onclick = () => { $("#ana").hidden = false; analysis(); }; $("#aclose").onclick = () => { $("#ana").hidden = true; };
   $("#ana").onclick = e => { if (e.target.id === "ana") $("#ana").hidden = true; };
   $("#about").onclick = () => { $("#drawer").hidden = false; }; $("#dclose").onclick = () => { $("#drawer").hidden = true; };
