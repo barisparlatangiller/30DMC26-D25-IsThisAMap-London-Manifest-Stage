@@ -489,7 +489,7 @@ function loop(now) {
 window.renderAt = (t, cam) => { S.t = t; if (cam) { G.fly = null; G.ctl.autoRotate = false; G.cam.position.set(...cam.p); G.ctl.target.set(...cam.t); } frameUI(t * 1000); };
 
 async function init() {
-  S.d = await fetch("data/stage.json?v=32").then(r => r.json());
+  S.d = await fetch("data/stage.json?v=33").then(r => r.json());
   for (const m of S.d.members) { m.pastel = m.color; m.color = VIVID[m.key] || m.color; }
   S.on = new Set(S.d.members.map(m => m.key));
   S.STOPS = stops();
@@ -538,9 +538,9 @@ function setOn(keys) {
 function setMode(md) { document.querySelectorAll(".modes button").forEach(x => x.classList.toggle("on", x.dataset.mode === md)); S.mode = md; S.dirty = true; }
 const M = n => S.d.members.find(m => m.name.startsWith(n));
 const FIND = [
-  { k: "Sueda", lab: "Centre stage", big: "46%", txt: "of the moments with all six in view, she is closest to the centre line" },
-  { k: "Hilal", k2: "Zeynep", lab: "Side by side", big: "79%", txt: "of the song Hilal's nearest neighbour is Zeynep" },
-  { k: "Sueda", lab: "Most ground", big: "79 m", txt: "walked in one song (Esin: 61 m)" }];
+  { k: "Sueda", lab: "The lead changes hands", big: "18%", txt: "Sueda leads most often on the main stage; all six take the tip (Esin, Zeynep 12%, Hilal 10%, Mina, Lidya 8%)" },
+  { k: "Hilal", lab: "Most ground", big: "89 m", txt: "walked in one song, out to the far left at 2:32 and back (Mina: 62 m)" },
+  { k: "Esin", k2: "Lidya", lab: "Side by side", big: "57%", txt: "of the song Esin's nearest neighbour is Lidya" }];
 function story() {
   $("#fcards").innerHTML = FIND.map((f, i) => { const m = M(f.k); return `<button class="fcard" data-i="${i}" style="--c:${m.color}">
     <span class="lab">${f.lab}</span><span class="nm"><i></i>${m.name.split(" ")[0]}${f.k2 ? ` & ${f.k2}` : ""}</span><b>${f.big}</b><span class="tx">${f.txt}</span></button>`; }).join("");
@@ -558,9 +558,9 @@ function tour(k) {
   S.ts = k; box.hidden = false; document.body.classList.add("touring");
   const su = M("Sueda"), hi = M("Hilal"), c = m => `<b style="color:${m.color}">${m.name.split(" ")[0]}</b>`;
   const steps = [
-    { t: 28, v: "audience", on: null, md: "acc", txt: `0:27 · Out of the dark, the song opens with <b>all six on a raised platform</b>, 3.3 m up and only half a metre apart; at 0:32 they open out to both sides. Each colour is one member. Wherever she stands still, a circle grows.` },
-    { t: 170, v: "top", on: [su.key], md: "acc", txt: `1:05–3:42 · The main stage. ${c(su)} holds the <b>centre</b> more than anyone: in 46% of the moments with all six in view she is closest to the centre line. She also walks the most, <b>79 m</b>.` },
-    { t: 240, v: "top", on: [hi.key, M("Zeynep").key], md: "all", txt: `3:42 · All six run down the 7.5 m runway to the front block, in one line. ${c(hi)} and ${c(M("Zeynep"))} are the closest pair of the song: <b>79%</b> of the time they are each other's nearest neighbour. Press play to watch it with the video, or tap a name below.` }];
+    { t: 28, v: "audience", on: null, md: "acc", txt: `0:27 · Out of the dark, <b>six silhouettes on a raised platform</b>, 3.3 m up. At 0:45 the light shows who is who. Lidya and Sueda lead the way down the stairs at 0:57. Each colour is one member; wherever she stands still, a circle grows.` },
+    { t: 222, v: "top", on: null, md: "all", txt: `1:04–3:42 · The main stage. The formation keeps changing and so does its tip: <b>all six take their turn in front</b>. ${c(su)} most often (18%), then ${c(M("Esin"))} and ${c(M("Zeynep"))} (12%), ${c(hi)} (10%), ${c(M("Mina"))} and ${c(M("Lidya"))} (8%).` },
+    { t: 270, v: "top", on: [hi.key], md: "all", txt: `${c(hi)} walks the most, <b>89 m</b>: at 2:32 she crosses to the far left end of the line and at 2:41 comes back to the middle. From 3:48 all six hold the front block, in a zigzag from 4:25. Press play to watch it with the video, or tap a name below.` }];
   const st = steps[k]; setT(st.t, true); setView(st.v); setOn(st.on); setMode(st.md);
   $("#tstep").textContent = `Tour · ${k + 1} / 3`; $("#ttext").innerHTML = st.txt;
   $("#tback").disabled = k === 0; $("#tnext").textContent = k === 2 ? "explore ✓" : "next →";

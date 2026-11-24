@@ -377,6 +377,21 @@ for nm, ks in K5.items():
         if not (179.5 < v < 222.0): continue
         r[1] = round(float(np.interp(v, kt, kx)), 2); r[2] = round(float(np.interp(v, kt, ky)), 2); r[6] = "ana_sahne_on"
 
+# 7f) the front block, 3:48-4:56, with Barış (24 Nov): one line Esin · Mina · Lidya · Sueda · Zeynep · Hilal that slowly moves
+#    forward until 4:25 (Mina and Lidya swap at 3:58); 4:25-4:46 a zigzag, Esin, Mina, Zeynep in front and Lidya, Sueda, Hilal
+#    one row back; 4:46 one line again, 4:48 close together around the centre for the final pose.
+XS = {"Esin": 7.0, "Lidya": 9.0, "Mina": 11.0, "Sueda": 13.0, "Zeynep Oktay": 15.0, "Hilal": 17.0}
+FIN = {"Esin": 8.5, "Lidya": 9.9, "Mina": 11.3, "Sueda": 12.7, "Zeynep Oktay": 14.1, "Hilal": 15.5}
+ZZ = {"Esin": 21.0, "Mina": 21.0, "Zeynep Oktay": 21.0, "Lidya": 20.0, "Sueda": 20.0, "Hilal": 20.0}
+for nm in XS:
+    x0 = {"Mina": 9.0, "Lidya": 11.0}.get(nm, XS[nm])           # before the 3:58 swap
+    ks = [(228.5, x0, 17.0), (237.5, x0, 17.4), (238.5, XS[nm], 17.5), (265.0, XS[nm], 20.5), (266.5, XS[nm], ZZ[nm]),
+          (286.0, XS[nm], ZZ[nm]), (287.0, XS[nm], 20.5), (288.5, FIN[nm], 20.5), (296.0, FIN[nm], 20.5)]
+    kt = np.array([k[0] for k in ks]); kx = np.array([k[1] for k in ks]); ky = np.array([k[2] for k in ks])
+    for r, v in zip(byname[nm]["s"], _vt):
+        if v < 228.45: continue
+        r[1] = round(float(np.interp(v, kt, kx)), 2); r[2] = round(float(np.interp(v, kt, ky)), 2); r[6] = "on_blok"
+
 # 8) every place sits on a corner of a 25 cm grid (24 Nov, with Barış). The grid is aligned with the national grid (EPSG:27700,
 #    multiples of 0.25 m), so the same corners can be snapped to in QGIS (layer › Digitizing › geometry precision 0.25).
 G25 = 0.25
@@ -385,6 +400,9 @@ for m in members:
         X = round((X0 + r[2]) / G25) * G25; Y = round((Y0 + r[1]) / G25) * G25      # local → EPSG:27700, snapped
         r[1], r[2] = round(Y - Y0, 3), round(X - X0, 3)
 
+for m in members:     # walked distance on the stage plan, from the shown positions (from 0:45, when they can be told apart)
+    pts_ = [(r[1], r[2]) for r, v in zip(m["s"], _vt) if v >= 45.3]
+    m["path_m"] = round(float(sum(np.hypot(b[0] - a[0], b[1] - a[1]) for a, b in zip(pts_, pts_[1:]))), 1)
 out = {"w": round(W, 2), "h": round(H, 2), "parts": parts, "members": members,
        "t0": int(pts.saniye.min()), "t1": int(pts.saniye.max()), "step": 2,
        "video": "YGtNsXgYqjo", "states": {"n": "clear", "y": "approximate", "s": "silhouette", "g": "not visible"},
@@ -466,7 +484,12 @@ out["warp"] = WARP
 def relations(d):
     M = d["members"]; n = len(M); first = lambda m: m["name"].split(" ")[0]
     P = np.array([[[s[1], s[2]] for s in m["s"]] for m in M]); V = np.array([[s[5] != "g" for s in m["s"]] for m in M])
-    allv = V.all(0)
+    allv = np.array([vw(t) >= 45.3 for t in (s[0] for s in M[0]["s"])])     # every position is now read from the video: use them all
+    lead = np.zeros(n); nl = 0
+    for k, t in enumerate(s[0] for s in M[0]["s"]):           # the tip of the formation on the main stage, 1:04-3:42
+        if not (64 <= vw(t) <= 222): continue
+        nl += 1; y = np.sort(P[:, k, 1])
+        if y[-1] - y[-2] > 0.3: lead[np.argmax(P[:, k, 1])] += 1
     front = np.zeros(n); centre = np.zeros(n); nb = np.zeros((n, n)); side = np.zeros(n); cnt = 0
     for k in np.where(allv)[0]:
         cnt += 1
@@ -479,7 +502,7 @@ def relations(d):
     side /= max(cnt, 1)
     for i, m in enumerate(M):
         j = int(np.argmax(nb[i])); lr = side[i] / (n - 1)
-        m["rel"] = {"front_pct": round(100 * front[i] / cnt), "centre_pct": round(100 * centre[i] / cnt),
+        m["rel"] = {"lead_pct": round(100 * lead[i] / nl), "front_pct": round(100 * front[i] / cnt), "centre_pct": round(100 * centre[i] / cnt),
                     "neighbour": first(M[j]), "neighbour_pct": round(100 * nb[i, j] / cnt),
                     "side": "left" if lr < 0.4 else "right" if lr > 0.6 else "centre", "lr": round(float(lr), 2)}
     f = max(M, key=lambda m: m["rel"]["front_pct"]); c = max(M, key=lambda m: m["rel"]["centre_pct"])
@@ -487,9 +510,8 @@ def relations(d):
                     next(x for x in M if first(x) == m["rel"]["neighbour"])["rel"]["neighbour"] == first(m)})
     lineup = " · ".join(first(m) for m in sorted(M, key=lambda m: m["rel"]["lr"]))
     facts = [
-        {"t": None, "title": "The line-up", "text": f"Seen from the audience, left to right, the usual order is {lineup}. It hardly changes all song."},
-        {"t": None, "title": "Centre stage", "text": f"{first(c)} is the one closest to the centre line in {c['rel']['centre_pct']}% of the moments when all six are visible."},
-        {"t": None, "title": "Closest to the crowd", "text": f"{first(f)} is the one nearest the audience {f['rel']['front_pct']}% of the time."},
+        {"t": None, "title": "The line-up", "text": f"Seen from the audience, left to right, the average order is {lineup}; the formations reshuffle it all the time."},
+        {"t": None, "title": "The lead changes hands", "text": "On the main stage the tip of the formation keeps moving: " + ", ".join(f"{first(m)} {m['rel']['lead_pct']}%" for m in sorted(M, key=lambda m: -m["rel"]["lead_pct"])) + " of the time. All six take their turn in front."},
     ]
     if pairs:
         facts.append({"t": None, "title": "Always side by side",
