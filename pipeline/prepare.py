@@ -300,6 +300,25 @@ for va, vb, span in SPREAD:
         for j, m in enumerate(sorted(members, key=lambda m: m["s"][k][1])):
             r = m["s"][k]; tx = min(23.0, max(1.0, c + (j - 2.5) * span / 5)); r[1] = round(r[1] + a * (tx - r[1]), 2)
 
+# 7b) 1:46-2:06, step by step with Barış (24 Nov): Zeynep alone at the left end, Sueda and Hilal at the right end, the trio
+#    Mina, Lidya, Esin in the middle. 1:50 Mina steps in front of Lidya (a column), Sueda in front of Hilal; 1:52 the trio opens
+#    into a row Mina · Lidya · Esin; 1:58 Lidya and Esin swap; 2:02 Lidya and Mina swap. Keyframes (video s, x, y), symmetric.
+K2 = {
+    "Zeynep Oktay": [(107.5, 4.0, 6.6), (126.0, 4.0, 6.6)],
+    "Hilal":        [(107.5, 20.0, 7.0), (109.5, 20.0, 7.0), (110.5, 20.0, 5.8), (126.0, 20.0, 5.8)],
+    "Sueda":        [(107.5, 20.0, 5.8), (109.5, 20.0, 5.8), (110.5, 20.0, 7.0), (126.0, 20.0, 7.0)],
+    "Lidya":        [(107.5, 12.0, 7.0), (109.5, 12.0, 7.0), (110.5, 12.0, 6.0), (112.5, 12.0, 6.6), (118.0, 12.0, 6.6), (119.0, 13.4, 6.6), (121.5, 13.4, 6.6), (122.5, 10.6, 6.6), (126.0, 10.6, 6.6)],
+    "Mina":         [(107.5, 11.0, 6.0), (109.5, 11.0, 6.0), (110.5, 12.0, 7.2), (112.5, 10.6, 6.6), (121.5, 10.6, 6.6), (122.5, 13.4, 6.6), (126.0, 13.4, 6.6)],
+    "Esin":         [(107.5, 13.0, 6.0), (109.5, 13.0, 6.0), (110.5, 12.0, 4.8), (112.5, 13.4, 6.6), (118.0, 13.4, 6.6), (119.0, 12.0, 6.6), (126.0, 12.0, 6.6)],
+}
+for nm, ks in K2.items():
+    kt = np.array([k[0] for k in ks]); kx = np.array([k[1] for k in ks]); ky = np.array([k[2] for k in ks])
+    for r, v in zip(byname[nm]["s"], _vt):
+        if not (106.5 <= v <= 126.5): continue
+        a = min(1.0, (v - 106.5) / 1.0)                       # one second to leave the 1:29 formation
+        r[1] = round(r[1] + a * (float(np.interp(v, kt, kx)) - r[1]), 2); r[2] = round(r[2] + a * (float(np.interp(v, kt, ky)) - r[2]), 2)
+        r[6] = "ana_sahne_on"
+
 # 8) every place sits on a corner of a 25 cm grid (24 Nov, with Barış). The grid is aligned with the national grid (EPSG:27700,
 #    multiples of 0.25 m), so the same corners can be snapped to in QGIS (layer › Digitizing › geometry precision 0.25).
 G25 = 0.25
