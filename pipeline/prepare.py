@@ -183,7 +183,7 @@ for k in range(len(members[0]["s"])):
 #    stands centre front, and only at 1:18 does Esin take her place; Hilal stays on the left until 1:28
 #    and crosses during the crowd shots, Zeynep is still the leftmost at 2:14. And two moments where the video shows the two dark-haired performers somewhere else than the notes: at 3:01 Hilal is up on the
 #    bottom steps and Zeynep walks off to the right edge, at the back; at 3:09 Zeynep dances hidden right behind the line.
-NAMED = [(69.0, 77.5, "Hilal", None, 0.8), (74.5, 77.5, "Hilal", 12.2, None), (74.5, 77.5, "Esin", 9.6, None),
+NAMED = [(70.5, 77.5, "Hilal", None, 0.8), (74.5, 77.5, "Hilal", 12.2, None), (74.5, 77.5, "Esin", 9.6, None),
          (83.0, 88.5, "Hilal", 8.8, None), (83.0, 88.5, "Zeynep Oktay", 9.9, None), (132.0, 135.6, "Zeynep Oktay", 9.4, None), (133.5, 135.6, "Hilal", 14.6, None), (136.4, 140.6, "Hilal", 11.9, None),
          (180.0, 183.5, "Hilal", None, -2.6), (180.0, 183.5, "Zeynep Oktay", 14.6, -2.0),
          (187.5, 191.5, "Zeynep Oktay", 12.9, -1.8), (187.5, 191.5, "Hilal", 11.3, None)]
@@ -205,6 +205,41 @@ for m in members:
     for k in range(k0 + 1, k1):
         f = (_vts[k] - _vts[k0]) / (_vts[k1] - _vts[k0]); r = m["s"][k]
         r[1] = round(a0[1] + f * (a1[1] - a0[1]), 2); r[2] = round(a0[2] + f * (a1[2] - a0[2]), 2); r[6] = "on_blok"
+
+# 6) formations read from the video by Barış (24 Nov), seen from the audience: x left → right, y toward the crowd.
+#    Inside each window (video seconds) the six stand as listed; 1 s at each edge blends from and back to the notes.
+F = {
+    "v_0109": ((67.5, 70.5), {"Sueda": (12.0, 7.3), "Zeynep Oktay": (10.2, 6.3), "Hilal": (13.8, 6.3), "Esin": (8.6, 5.3), "Lidya": (12.0, 5.0), "Mina": (15.4, 5.3)}),
+    "w_0231": ((150.5, 162.5), {"Zeynep Oktay": (4.6, 6.8), "Sueda": (6.6, 6.8), "Hilal": (12.0, 7.3), "Esin": (12.0, 5.2), "Lidya": (17.4, 6.8), "Mina": (19.4, 6.8)}),
+    "l_0244": ((163.5, 170.0), {"Hilal": (12.0, 7.3), "Esin": (7.4, 5.2), "Zeynep Oktay": (9.2, 5.2), "Sueda": (11.0, 5.2), "Lidya": (13.9, 5.2), "Mina": (15.7, 5.2)}),
+    "w_0333": ((210.5, 221.9), {"Lidya": (8.6, 7.3), "Zeynep Oktay": (12.0, 7.4), "Hilal": (15.4, 7.3), "Esin": (10.3, 5.9), "Mina": (12.0, 5.9), "Sueda": (13.7, 5.9)}),
+}
+RUN = {"Lidya": (12.0, 10.6), "Mina": (10.7, 9.3), "Sueda": (12.5, 9.3), "Zeynep Oktay": (13.9, 9.3), "Esin": (9.7, 8.1), "Hilal": (14.5, 8.1)}   # 3:42, three rows
+_vt = [float(np.interp(r[0], _wa[:, 0], _wa[:, 1])) for r in members[0]["s"]]
+for key, ((va, vb), pos_) in F.items():
+    for nm, (fx, fy) in pos_.items():
+        m = byname[nm]
+        for k, r in enumerate(m["s"]):
+            v = _vt[k]
+            if v < va - 1 or v > vb + 1: continue
+            a = 1.0 if va <= v <= vb else max(0.0, 1 - min(abs(v - va), abs(v - vb)))
+            r[1] = round(r[1] + a * (fx - r[1]), 2); r[2] = round(r[2] + a * (fy - r[2]), 2)
+            if a > 0.5 and r[6] != "ana_sahne_on": r[6] = "ana_sahne_on"
+# the run: from 3:42 the six move down the runway in three rows and reach the front block at 3:48
+kr = [k for k, v in enumerate(_vt) if 222.0 <= v < 228.4]
+for nm, (fx, fy) in RUN.items():
+    m = byname[nm]
+    for j, k in enumerate(kr):
+        f = j / max(1, len(kr)); r = m["s"][k]
+        r[1] = round(fx, 2); r[2] = round(min(15.8, fy + f * 7.0), 2); r[6] = "runway"
+# the opening: dark until 0:27; from 0:32 the six open out to the left and right on the platform
+tgt = {m["name"]: next((r[1], min(2.2, r[2])) for r, v in zip(m["s"], _vt) if v >= 55.5) for m in members}
+for m in members:
+    tx, ty = tgt[m["name"]]
+    for r, v in zip(m["s"], _vt):
+        if 32.0 <= v < 55.5 and r[6] == "platform":
+            a = min(1.0, (v - 32.0) / 4.0)
+            r[1] = round(r[1] + a * (tx - r[1]), 2); r[2] = round(r[2] + a * (ty - r[2]), 2)
 
 out = {"w": round(W, 2), "h": round(H, 2), "parts": parts, "members": members,
        "t0": int(pts.saniye.min()), "t1": int(pts.saniye.max()), "step": 2,

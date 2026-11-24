@@ -47,20 +47,12 @@ Footprints: consecutive samples within 0.9 m of where a stop began form one stop
 area grows with the time spent (2 s: 0.5 m across, 30 s: 2 m, 60 s: 2.8 m); stops of 20 s or more show their duration.
 
 ## Sync with the video
-The positions were noted on a clock that drifts against the published video: about 3 s at the start and about 40 s
-by the move to the front block. `prepare.py` therefore stores six anchor moments, checked by eye against the video
-(`WARP`):
-
-| Moment | Data clock | Video |
-|---|---|---|
-| Silhouettes appear | 0:26 | 0:29 |
-| First step down | 0:56 | 1:00 |
-| Off the stairs | 1:12 | 1:16 |
-| Start of the run | 3:42 | 4:23 |
-| Arrival at the front block | 3:46 | 4:28 |
-| End | 4:50 | 4:56 |
-
-The page interpolates linearly between the anchors. A "map vs. video" control allows ±6 s of fine-tuning.
+The positions were noted on a clock that drifts against the published video. `prepare.py` stores ten anchor moments (`WARP_`),
+checked by eye against the video and confirmed again on 24 Nov: silhouettes 0:27, first step down 0:56, all six on the main stage
+1:09, solo 2:31, regroup 2:44, front edge 3:33, the run 3:42, front block 3:48, widest line 4:15, final pose 4:54.
+The formations at 1:09 (V), 2:31 and 2:44 (pairs on the sides, Hilal centre front), 3:33 (W) and the run in three rows at 3:42
+were read again from the video and override the notes in those windows (step 6 in `prepare.py`). The stage stays dark until 0:27
+and the six open out on the platform from 0:32.
 
 ## Limits
 Screen positions are not surveyed coordinates. Camera cuts and people out of frame make every point an estimate,

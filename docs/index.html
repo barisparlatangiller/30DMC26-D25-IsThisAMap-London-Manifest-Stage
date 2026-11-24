@@ -50,12 +50,12 @@
 
 <footer class="dock">
   <button id="play" class="play" aria-label="Play"><svg viewBox="0 0 24 24"><path id="playIcon" d="M8 5v14l11-7z"/></svg></button>
-  <div class="clock"><b id="clock">0:29</b><small>/ 4:56</small></div>
+  <div class="clock"><b id="clock">0:23</b><small>/ 4:56</small></div>
   <div class="track" id="track">
     <div class="marks" id="marks"></div>
     <canvas id="lanes"></canvas>
     <div class="head" id="head"></div>
-    <input id="time" type="range" min="20" max="300" step="0.05" value="29" aria-label="Time in the song">
+    <input id="time" type="range" min="20" max="300" step="0.05" value="23" aria-label="Time in the song">
   </div>
   <button id="anaBtn" class="ghost pill">Who owns the stage</button>
   <button id="about" class="ghost pill">How it's made</button>
@@ -91,8 +91,8 @@
       Clear sightings count fully, approximate ones 0.6, silhouettes 0.4; moments when she is out of frame are left out and shown as a dashed ring.</p>
     <div class="facts" id="facts"></div>
     <h3>Sync with the video</h3>
-    <p>The positions were noted on a clock that drifts against the published video (about 3 s at the start, 40 s near the end), so the map follows
-      the video through six anchor moments checked by eye. If the map runs ahead or behind on your screen, nudge it:</p>
+    <p>The positions were noted on a clock that drifts against the published video, so the map follows the video through ten anchor moments checked by eye
+      (platform, stairs, main stage, the solo, the regroup, the run, the front block, the final pose). The formations at 1:09, 2:31, 2:44, 3:33 and the run at 3:42 were read again from the video on 24 Nov. If the map runs ahead or behind on your screen, nudge it:</p>
     <div class="nudge"><button id="nudgeM" class="ghost pill">−0.5 s</button><b id="offv" class="mono">0.0 s</b><button id="nudgeP" class="ghost pill">+0.5 s</button>
       <label class="tog"><input id="unc" type="checkbox" checked> include uncertain moments</label></div>
     <p>The stage around the map is drawn after the video: the LED wall, the truss and moving lights, the edge light strips, the CO₂ jets at the moments they fire, the screens beside the stage (a live close-up camera of this 3D stage) and the crowd. The six are stylised figures in their own hair and costume colours. None of this is data; the colours on the floor and the positions are.</p>
@@ -104,6 +104,6 @@
   </div>
 </div>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
-<script type="module" src="app.js?v=50"></script>
+<script type="module" src="app.js?v=51"></script>
 </body>
 </html>

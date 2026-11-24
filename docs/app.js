@@ -20,7 +20,7 @@ const rgba = (h, a) => { const [r, g, b] = hex(h); return `rgba(${r},${g},${b},$
 const VID = new URLSearchParams(location.search).has("video");
 if (VID) document.body.classList.add("vid");
 
-const S = { d: null, t: 29, dt: 26, mode: "acc", unc: true, off: 0, on: new Set(), playing: false, yt: null, ytReady: false,
+const S = { d: null, t: 23, dt: 22, mode: "acc", unc: true, off: 0, on: new Set(), playing: false, yt: null, ytReady: false,
   last: performance.now(), dirty: true, grids: {}, recent: {}, applied: {}, accKey: "", heatT: -99, heatKey: "" };
 window.S = S;
 let GW = 0, GH = 0, KER = null, KR = 0, IMG = null, BASE = 0;     // BASE: main-stage height; the 3D scene puts the main stage at y = 0
@@ -72,15 +72,23 @@ function updateGrids() {
   for (const m of S.d.members) { const g = S.recent[m.key]; g.fill(0); if (S.mode === "all") continue;
     for (const s of m.s) { const age = t - s[0]; if (age < 0) break; if (age > 4 * TAU) continue; const w = wOf(s); if (w) stamp(g, s[1], s[2], w * Math.exp(-age / TAU)); } }
 }
-function paintHeat() {     // every spot takes the colour of whoever spent the most time there; brightness = how much time in total
-  const ms = S.d.members.filter(m => S.on.has(m.key)), cols = ms.map(m => hex(m.color)), gs = ms.map(m => S.grids[m.key]), rs = ms.map(m => S.recent[m.key]);
+const lin = c => { c /= 255; return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; }, gam = c => 255 * (c <= 0.0031308 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - 0.055);
+function toLab([r, g, b]) { r = lin(r); g = lin(g); b = lin(b);
+  const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b), m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b), s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+  return [0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s, 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s, 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s]; }
+function fromLab([L, A, B]) { const l = (L + 0.3963377774 * A + 0.2158037573 * B) ** 3, m = (L - 0.1055613458 * A - 0.0638541728 * B) ** 3, s = (L - 0.0894841775 * A - 1.291485548 * B) ** 3;
+  return [gam(4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s), gam(-1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s), gam(-0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s)].map(v => Math.max(0, Math.min(255, v))); }
+const SOFT = 4;                                    // higher = harder borders; 4 keeps clear territories pure and blends only where two are close
+function paintHeat() {     // colour: a soft mix of who spent time there (the one who stayed longest dominates); brightness = how much time in total
+  const ms = S.d.members.filter(m => S.on.has(m.key)), labs = ms.map(m => toLab(hex(m.color))), gs = ms.map(m => S.grids[m.key]), rs = ms.map(m => S.recent[m.key]);
   const fl = S.mode === "acc" ? FLOOR : 1, rc = S.mode === "acc" ? 1 - FLOOR : 0, K = S.mode === "trail" ? 1.1 : S.mode === "acc" ? 3.2 : 5.5, px = IMG.data;
   for (let p = 0, q = 0; p < GW * GH; p++, q += 4) {
-    let T = 0, best = -1, bv = 0;
-    for (let i = 0; i < gs.length; i++) { const v = fl * gs[i][p] + rc * rs[i][p]; if (v <= 0) continue; T += v; if (v > bv) { bv = v; best = i; } }
+    let T = 0, bv = 0, W = 0, L = 0, A = 0, B = 0;
+    for (let i = 0; i < gs.length; i++) { const v = fl * gs[i][p] + rc * rs[i][p]; if (v <= 0) continue; T += v; if (v > bv) bv = v; }
     if (T < 1e-3) { px[q + 3] = 0; continue; }
-    const c = cols[best], share = bv / T;
-    px[q] = c[0]; px[q + 1] = c[1]; px[q + 2] = c[2]; px[q + 3] = 255 * (1 - Math.exp(-T / K)) * (0.5 + 0.5 * share);
+    for (let i = 0; i < gs.length; i++) { const v = fl * gs[i][p] + rc * rs[i][p]; if (v <= 0) continue; const w = (v / T) ** SOFT; W += w; L += w * labs[i][0]; A += w * labs[i][1]; B += w * labs[i][2]; }
+    const c = fromLab([L / W, A / W, B / W]), share = bv / T;
+    px[q] = c[0]; px[q + 1] = c[1]; px[q + 2] = c[2]; px[q + 3] = 0.9 * 255 * (1 - Math.exp(-T / K)) * (0.6 + 0.4 * share);
   }
   hx.putImageData(IMG, 0, 0);
   // the floor texture: soft colour, only on the stage (a faint grid underneath)
@@ -88,7 +96,7 @@ function paintHeat() {     // every spot takes the colour of whoever spent the m
   tx.lineWidth = 1;                                        // a very light 1 m grid, just enough to read distances
   for (let x = 0; x <= S.d.w; x++) { tx.strokeStyle = x % 4 ? "rgba(220,205,255,.018)" : "rgba(220,205,255,.032)"; tx.beginPath(); tx.moveTo(x * HPX + 0.5, 0); tx.lineTo(x * HPX + 0.5, htex.height); tx.stroke(); }
   for (let y = 0; y <= S.d.h; y++) { tx.strokeStyle = y % 4 ? "rgba(220,205,255,.018)" : "rgba(220,205,255,.032)"; tx.beginPath(); tx.moveTo(0, y * HPX + 0.5); tx.lineTo(htex.width, y * HPX + 0.5); tx.stroke(); }
-  tx.imageSmoothingEnabled = true; tx.filter = "blur(1px)"; tx.globalAlpha = 0.62; tx.drawImage(heat, 0, 0, htex.width, htex.height); tx.filter = "none"; tx.globalAlpha = 1;
+  tx.imageSmoothingEnabled = true; tx.filter = "blur(2.5px)"; tx.globalAlpha = 0.56; tx.drawImage(heat, 0, 0, htex.width, htex.height); tx.filter = "none"; tx.globalAlpha = 1;
   tx.globalCompositeOperation = "destination-in"; tx.fillStyle = "#fff";
   tx.beginPath();                                          // one path for all parts: destination-in keeps their union
   for (const p of S.d.parts) if (["ana_sahne", "runway", "on_blok", "platform"].includes(p.id)) { p.poly.forEach(([x, y], i) => i ? tx.lineTo(x * HPX, y * HPX) : tx.moveTo(x * HPX, y * HPX)); tx.closePath(); }
@@ -239,8 +247,8 @@ function buildScene() {
   G.stops = {}; const disc = new THREE.CircleGeometry(1, 48), rim = new THREE.RingGeometry(0.9, 1, 48);
   S.d.members.forEach((m, i) => { const col = new THREE.Color(m.color), L = [];
     for (const st of S.STOPS[m.key]) { const g = new THREE.Group();
-      const f = new THREE.Mesh(disc, new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.32 + 0.28 * st.w, depthWrite: false }));
-      const r2 = new THREE.Mesh(rim, new THREE.MeshBasicMaterial({ color: col.clone().multiplyScalar(1.15), transparent: true, opacity: 0.95, depthWrite: false }));
+      const f = new THREE.Mesh(disc, new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.16 + 0.16 * st.w, depthWrite: false }));
+      const r2 = new THREE.Mesh(rim, new THREE.MeshBasicMaterial({ color: col.clone().multiplyScalar(1.15), transparent: true, opacity: 0.5, depthWrite: false }));
       f.rotation.x = r2.rotation.x = -Math.PI / 2; g.add(f, r2); g.position.copy(W3(st.x, st.y, st.z - BASE + 0.03 + i * 0.004)); g.renderOrder = 2 + i;
       let lbl = null; const sec = (st.n) * 2;
       if (sec >= 20) { lbl = secSprite(`${sec} s`, m.color); lbl.position.set(0, 0.25, 0); g.add(lbl); }
@@ -286,7 +294,8 @@ function update(now) {
   const tEnd = S.mode === "all" ? S.d.t1 : S.dt;
   for (const m of S.d.members) {
     const P = G.p[m.key], on = S.on.has(m.key), p = pos(m, S.dt), hidden = p.state === "g";
-    P.grp.visible = on; G.paths[m.key].visible = on;
+    const dawn = Math.max(0, Math.min(1, (S.t - 27) / 1.2));             // the video opens dark; the six appear at 0:27
+    P.grp.visible = on && dawn > 0; G.paths[m.key].visible = on && dawn > 0;
     if (!on) continue;
     P.grp.position.copy(W3(p.x, p.y, p.z - BASE));
     const full = S.mode !== "all", vis = hidden ? 0.35 : 1;
@@ -304,6 +313,7 @@ function update(now) {
   // backing dancers fade in and out with their passages
   { let o = 0; for (const c of G.crew.groups) { const k = Math.min(1, (S.t - c.a) / 1, (c.b - S.t) / 1); c.g.visible = k > 0; if (k > 0) o = Math.max(o, k); } G.crew.mat.opacity = 0.55 * o; }
   updateSet(G.set, { r: G.r, scene: G.scene, S, t: S.t, now, G, pos, W3, BASE });
+  G.r.toneMappingExposure = (G.expo0 ??= G.r.toneMappingExposure) * (0.35 + 0.65 * Math.max(0, Math.min(1, (S.t - 26) / 2)));
   const plan = G.view === "top"; if (plan) for (const o of G.deco) o.visible = false; else if (G.wasPlan) for (const o of G.deco) o.visible = true;
   G.wasPlan = plan; G.crowd.visible = !plan; G.backdrop.visible = !plan; G.crew.groups.forEach(c => { if (plan) c.g.visible = false; }); G.bloom.strength = plan ? 0.22 : 0.5;
   // phone lights twinkle
@@ -473,7 +483,7 @@ function loop(now) {
 window.renderAt = (t, cam) => { S.t = t; if (cam) { G.fly = null; G.ctl.autoRotate = false; G.cam.position.set(...cam.p); G.ctl.target.set(...cam.t); } frameUI(t * 1000); };
 
 async function init() {
-  S.d = await fetch("data/stage.json?v=17").then(r => r.json());
+  S.d = await fetch("data/stage.json?v=18").then(r => r.json());
   for (const m of S.d.members) { m.pastel = m.color; m.color = VIVID[m.key] || m.color; }
   S.on = new Set(S.d.members.map(m => m.key));
   S.STOPS = stops();
@@ -519,8 +529,8 @@ function setOn(keys) {
 function setMode(md) { document.querySelectorAll(".modes button").forEach(x => x.classList.toggle("on", x.dataset.mode === md)); S.mode = md; S.dirty = true; }
 const M = n => S.d.members.find(m => m.name.startsWith(n));
 const FIND = [
-  { k: "Sueda", lab: "Centre stage", big: "46%", txt: "of the moments she is the one closest to the centre line" },
-  { k: "Hilal", lab: "Closest to the crowd", big: "46%", txt: "of the time she is the one nearest the audience" },
+  { k: "Sueda", lab: "Centre stage", big: "46%", txt: "of the moments with all six in view, she is closest to the centre line" },
+  { k: "Hilal", lab: "Closest to the crowd", big: "41%", txt: "of the time she is the one nearest the audience" },
   { k: "Sueda", lab: "Most ground", big: "79 m", txt: "walked in one song (Esin: 61 m)" }];
 function story() {
   $("#fcards").innerHTML = FIND.map((f, i) => { const m = M(f.k); return `<button class="fcard" data-i="${i}" style="--c:${m.color}">
@@ -539,9 +549,9 @@ function tour(k) {
   S.ts = k; box.hidden = false; document.body.classList.add("touring");
   const su = M("Sueda"), hi = M("Hilal"), c = m => `<b style="color:${m.color}">${m.name.split(" ")[0]}</b>`;
   const steps = [
-    { t: 30, v: "audience", on: null, md: "acc", txt: `0:27 · The song opens with <b>all six on a raised platform</b>, 3.3 m up and only half a metre apart. Each colour is one member. Wherever she stands still, a circle grows.` },
-    { t: 170, v: "top", on: [su.key], md: "acc", txt: `1:05–3:44 · The main stage. ${c(su)} holds the <b>centre</b> more than anyone: in 46% of the moments she is closest to the centre line. She also walks the most, <b>79 m</b>.` },
-    { t: 240, v: "top", on: [hi.key], md: "all", txt: `3:44 · All six run down the 7.5 m runway to the front block. ${c(hi)} is the one <b>nearest the crowd</b>, 46% of the song. Press play to watch it with the video, or tap a name below.` }];
+    { t: 28, v: "audience", on: null, md: "acc", txt: `0:27 · Out of the dark, the song opens with <b>all six on a raised platform</b>, 3.3 m up and only half a metre apart; at 0:32 they open out to both sides. Each colour is one member. Wherever she stands still, a circle grows.` },
+    { t: 170, v: "top", on: [su.key], md: "acc", txt: `1:05–3:42 · The main stage. ${c(su)} holds the <b>centre</b> more than anyone: in 46% of the moments with all six in view she is closest to the centre line. She also walks the most, <b>79 m</b>.` },
+    { t: 240, v: "top", on: [hi.key], md: "all", txt: `3:42 · All six run down the 7.5 m runway to the front block. ${c(hi)} is the one <b>nearest the crowd</b>, 41% of the song. Press play to watch it with the video, or tap a name below.` }];
   const st = steps[k]; setT(st.t, true); setView(st.v); setOn(st.on); setMode(st.md);
   $("#tstep").textContent = `Tour · ${k + 1} / 3`; $("#ttext").innerHTML = st.txt;
   $("#tback").disabled = k === 0; $("#tnext").textContent = k === 2 ? "explore ✓" : "next →";

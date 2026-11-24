@@ -20,7 +20,7 @@ await p.evaluate(() => {
   const o = document.createElement("div"); o.id = "outro"; document.body.appendChild(o);
   o.innerHTML = `<h2>Who owns the stage?</h2>
     <div class="r"><i style="background:${su.color};color:${su.color}"></i><span><b>Sueda</b>holds the centre most</span><em style="color:${su.color}">46%</em></div>
-    <div class="r"><i style="background:${hi.color};color:${hi.color}"></i><span><b>Hilal</b>stands closest to the crowd</span><em style="color:${hi.color}">46%</em></div>
+    <div class="r"><i style="background:${hi.color};color:${hi.color}"></i><span><b>Hilal</b>stands closest to the crowd</span><em style="color:${hi.color}">41%</em></div>
     <div class="r"><i style="background:${su.color};color:${su.color}"></i><span><b>Sueda</b>covers the most ground</span><em style="color:${su.color}">79 m</em></div>
     <p>Manifest · Intro &amp; Hileli · OVO Arena Wembley. One position every 2 s, read from the concert video. Interactive map: link in the post.</p>`;
   window.KEYS = { su: su.key, hi: hi.key };
@@ -35,9 +35,9 @@ for (const n of FRAMES) {
   if (s < 4) { t = 29 + s * 2.5; cam = camAt(CAM.close, CAM.front, e(cl(s, 1.2, 4))); view = "audience";
     CAP = ["0:27", "Six on the platform", "Manifest, a six-member Turkish girl group, live at Wembley. Every 2 s of the song became a position on the stage."]; }
   else if (s < 11) { t = 80 + (s - 4) * 18; cam = camAt(CAM.front, CAM.plan, e(cl(s, 4, 5.5))); on = "su";
-    CAP = ["1:05 – 3:44 · main stage", "Centre stage: Sueda", "In 46% of the moments she is the one closest to the centre line. She also walks the most: 79 m."]; }
+    CAP = ["1:05 – 3:42 · main stage", "Centre stage: Sueda", "With all six in view, she is closest to the centre line 46% of the time. She also walks the most: 79 m."]; }
   else if (s < 17.5) { t = 222 + (s - 11) * 7; cam = camAt(CAM.plan, CAM.front, e(cl(s, 11, 12.5)) * 0.45); on = "hi";
-    CAP = ["3:44 · the run to the front", "Closest to the crowd: Hilal", "After the run down the 7.5 m runway, she is the one nearest the audience, 46% of the song."]; }
+    CAP = ["3:42 · the run to the front", "Closest to the crowd: Hilal", "After the run down the 7.5 m runway, she is the one nearest the audience, 41% of the song."]; }
   else if (s < 21.5) { t = 296; mode = "all"; cam = camAt(camAt(CAM.plan, CAM.front, 0.45), CAM.plan, e(cl(s, 17.5, 18.8))); 
     CAP = ["0:27 – 4:56", "The whole song, as a map", "Each circle is a stop, bigger when she stood longer. The floor takes the colour of whoever stood there longest."]; }
   else { t = 296; mode = "all"; cam = CAM.plan; CAP = []; }
