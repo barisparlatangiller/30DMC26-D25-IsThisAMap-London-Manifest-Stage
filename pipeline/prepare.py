@@ -206,12 +206,37 @@ for m in members:
         f = (_vts[k] - _vts[k0]) / (_vts[k1] - _vts[k0]); r = m["s"][k]
         r[1] = round(a0[1] + f * (a1[1] - a0[1]), 2); r[2] = round(a0[2] + f * (a1[2] - a0[2]), 2); r[6] = "on_blok"
 
+_vt = [float(np.interp(r[0], _wa[:, 0], _wa[:, 1])) for r in members[0]["s"]]
+# 5b) steadiness pass (24 Nov, with Barış): a performer only moves when she really moves. Camera changes made the notes
+#    drift by a metre or so; those drifts are dropped. A new place counts only if it is more than 1.3 m away and she stays
+#    there for at least two readings (4 s); a change of stage part (stairs, runway, front block) always counts.
+#    While the camera does not show her ("not visible"), she keeps her last seen place.
+STEADY, STAY = 1.3, 0.9
+RUNWIN = (221.9, 228.6)
+for m in members:
+    s = m["s"]; n = len(s); hx, hy, hz = s[0][1], s[0][2], s[0][6]
+    k = 0
+    while k < n:
+        r = s[k]; v = _vt[k]
+        if v < 60 or RUNWIN[0] <= v <= RUNWIN[1] or r[6] in ("platform", "merdiven", "runway"):
+            hx, hy, hz = r[1], r[2], r[6]; k += 1; continue
+        if r[6] != hz:
+            hx, hy, hz = r[1], r[2], r[6]; k += 1; continue
+        if r[5] == "g":
+            r[1], r[2] = hx, hy; k += 1; continue
+        if abs(r[1] - hx) > STEADY or abs(r[2] - hy) > STEADY:
+            nxt = [s[j] for j in range(k, min(n, k + 3)) if s[j][6] == hz and s[j][5] != "g"]
+            if len(nxt) >= 2 and all(abs(q[1] - r[1]) <= STAY and abs(q[2] - r[2]) <= STAY for q in nxt[:2]):
+                hx = round(sum(q[1] for q in nxt[:2]) / 2, 2); hy = round(sum(q[2] for q in nxt[:2]) / 2, 2)
+        r[1], r[2] = hx, hy; k += 1
+
 # 6) formations read from the video by Barış (24 Nov), seen from the audience: x left → right, y toward the crowd.
 #    Inside each window (video seconds) the six stand as listed; 1 s at each edge blends from and back to the notes.
 F = {
     "v_0109": ((67.5, 70.5), {"Sueda": (12.0, 7.3), "Zeynep Oktay": (10.2, 6.3), "Hilal": (13.8, 6.3), "Esin": (8.6, 5.3), "Lidya": (12.0, 5.0), "Mina": (15.4, 5.3)}),
     "w_0231": ((150.5, 162.5), {"Zeynep Oktay": (4.6, 6.8), "Sueda": (6.6, 6.8), "Hilal": (12.0, 7.3), "Esin": (12.0, 5.2), "Lidya": (17.4, 6.8), "Mina": (19.4, 6.8)}),
     "l_0244": ((163.5, 170.0), {"Hilal": (12.0, 7.3), "Esin": (7.4, 5.2), "Zeynep Oktay": (9.2, 5.2), "Sueda": (11.0, 5.2), "Lidya": (13.9, 5.2), "Mina": (15.7, 5.2)}),
+    "final":  ((289.5, 296.0), {"Esin": (8.5, 19.2), "Lidya": (9.9, 19.2), "Mina": (11.3, 19.2), "Sueda": (12.7, 19.2), "Zeynep Oktay": (14.1, 19.2), "Hilal": (15.5, 19.2)}),
     "w_0333": ((210.5, 221.9), {"Lidya": (8.6, 7.3), "Zeynep Oktay": (12.0, 7.4), "Hilal": (15.4, 7.3), "Esin": (10.3, 5.9), "Mina": (12.0, 5.9), "Sueda": (13.7, 5.9)}),
 }
 RUN = {"Lidya": (12.0, 10.6), "Mina": (10.7, 9.3), "Sueda": (12.5, 9.3), "Zeynep Oktay": (13.9, 9.3), "Esin": (9.7, 8.1), "Hilal": (14.5, 8.1)}   # 3:42, three rows
@@ -224,7 +249,7 @@ for key, ((va, vb), pos_) in F.items():
             if v < va - 1 or v > vb + 1: continue
             a = 1.0 if va <= v <= vb else max(0.0, 1 - min(abs(v - va), abs(v - vb)))
             r[1] = round(r[1] + a * (fx - r[1]), 2); r[2] = round(r[2] + a * (fy - r[2]), 2)
-            if a > 0.5 and r[6] != "ana_sahne_on": r[6] = "ana_sahne_on"
+            if a > 0.5 and key != "final" and r[6] != "ana_sahne_on": r[6] = "ana_sahne_on"
 # the run: from 3:42 the six move down the runway in three rows and reach the front block at 3:48
 kr = [k for k, v in enumerate(_vt) if 222.0 <= v < 228.4]
 for nm, (fx, fy) in RUN.items():
@@ -232,14 +257,25 @@ for nm, (fx, fy) in RUN.items():
     for j, k in enumerate(kr):
         f = j / max(1, len(kr)); r = m["s"][k]
         r[1] = round(fx, 2); r[2] = round(min(15.8, fy + f * 7.0), 2); r[6] = "runway"
-# the opening: dark until 0:27; from 0:32 the six open out to the left and right on the platform
-tgt = {m["name"]: next((r[1], min(2.2, r[2])) for r, v in zip(m["s"], _vt) if v >= 55.5) for m in members}
-for m in members:
-    tx, ty = tgt[m["name"]]
+# the opening (checked frame by frame on 24 Nov): the lights come on at 26.05 s with the six in a tight group; they hold still
+# until 31.5 s and by 33 s stand in one evenly spaced line across the platform, about 7 m wide, in the same order.
+_order = sorted(members, key=lambda m: next(r[1] for r, v in zip(m["s"], _vt) if v >= 30))
+for j, m in enumerate(_order):
+    tx, ty = 12.0 + (j - 2.5) * 1.4, 1.6
     for r, v in zip(m["s"], _vt):
-        if 32.0 <= v < 55.5 and r[6] == "platform":
-            a = min(1.0, (v - 32.0) / 4.0)
+        if 31.5 <= v < 55.5 and r[6] == "platform":
+            a = min(1.0, (v - 31.5) / 1.5)
             r[1] = round(r[1] + a * (tx - r[1]), 2); r[2] = round(r[2] + a * (ty - r[2]), 2)
+# wide lines seen on the wide shots: the notes squeeze them. In these windows the six stand evenly spaced across the width the
+# video shows, around the line's own centre and in the same left-to-right order.
+SPREAD = [(89.5, 106.0, 11.0)]
+for va, vb, span in SPREAD:
+    for k, v in enumerate(_vt):
+        if not (va - 1 <= v <= vb + 1): continue
+        a = 1.0 if va <= v <= vb else max(0.0, 1 - min(abs(v - va), abs(v - vb)))
+        xs = [m["s"][k][1] for m in members]; c = (max(xs) + min(xs)) / 2
+        for j, m in enumerate(sorted(members, key=lambda m: m["s"][k][1])):
+            r = m["s"][k]; tx = min(23.0, max(1.0, c + (j - 2.5) * span / 5)); r[1] = round(r[1] + a * (tx - r[1]), 2)
 
 out = {"w": round(W, 2), "h": round(H, 2), "parts": parts, "members": members,
        "t0": int(pts.saniye.min()), "t1": int(pts.saniye.max()), "step": 2,
@@ -325,8 +361,9 @@ def relations(d):
     front = np.zeros(n); centre = np.zeros(n); nb = np.zeros((n, n)); side = np.zeros(n); cnt = 0
     for k in np.where(allv)[0]:
         cnt += 1
-        front[np.argmax(P[:, k, 1])] += 1
-        centre[np.argmin(np.abs(P[:, k, 0] - d["w"] / 2))] += 1
+        fy = np.sort(P[:, k, 1]); cx = np.sort(np.abs(P[:, k, 0] - d["w"] / 2))
+        if fy[-1] - fy[-2] > 0.3: front[np.argmax(P[:, k, 1])] += 1           # a clear front-runner only, not a tie on one line
+        if cx[1] - cx[0] > 0.3: centre[np.argmin(np.abs(P[:, k, 0] - d["w"] / 2))] += 1
         D = np.linalg.norm(P[:, None, k] - P[None, :, k], axis=2); np.fill_diagonal(D, 1e9)
         for i in range(n): nb[i, np.argmin(D[i])] += 1
         order = np.argsort(P[:, k, 0]); side[order] += np.arange(n)

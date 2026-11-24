@@ -17,6 +17,7 @@ const VIVID = { Siyah: "#9b6bff", Kizil: "#ff4d5e", Kumral: "#ffc928", Mavi: "#3
 const fmt = t => `${Math.floor(Math.max(0, t) / 60)}:${String(Math.floor(Math.max(0, t) % 60)).padStart(2, "0")}`;
 const hex = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
 const rgba = (h, a) => { const [r, g, b] = hex(h); return `rgba(${r},${g},${b},${a})`; };
+const LIGHTS_ON = 26.05;   // video second when the whole stage lights up at once (checked frame by frame: dark at 26.0, lit at 26.1)
 const VID = new URLSearchParams(location.search).has("video");
 if (VID) document.body.classList.add("vid");
 
@@ -294,7 +295,7 @@ function update(now) {
   const tEnd = S.mode === "all" ? S.d.t1 : S.dt;
   for (const m of S.d.members) {
     const P = G.p[m.key], on = S.on.has(m.key), p = pos(m, S.dt), hidden = p.state === "g";
-    const dawn = Math.max(0, Math.min(1, (S.t - 27) / 1.2));             // the video opens dark; the six appear at 0:27
+    const dawn = S.t >= LIGHTS_ON ? 1 : 0;                                // the video opens dark; the six appear with the lights
     P.grp.visible = on && dawn > 0; G.paths[m.key].visible = on && dawn > 0;
     if (!on) continue;
     P.grp.position.copy(W3(p.x, p.y, p.z - BASE));
@@ -313,7 +314,7 @@ function update(now) {
   // backing dancers fade in and out with their passages
   { let o = 0; for (const c of G.crew.groups) { const k = Math.min(1, (S.t - c.a) / 1, (c.b - S.t) / 1); c.g.visible = k > 0; if (k > 0) o = Math.max(o, k); } G.crew.mat.opacity = 0.55 * o; }
   updateSet(G.set, { r: G.r, scene: G.scene, S, t: S.t, now, G, pos, W3, BASE });
-  G.r.toneMappingExposure = (G.expo0 ??= G.r.toneMappingExposure) * (0.35 + 0.65 * Math.max(0, Math.min(1, (S.t - 26) / 2)));
+  G.r.toneMappingExposure = (G.expo0 ??= G.r.toneMappingExposure) * (S.t >= LIGHTS_ON ? 1 : 0.03);   // all lights on in one frame, as in the video
   const plan = G.view === "top"; if (plan) for (const o of G.deco) o.visible = false; else if (G.wasPlan) for (const o of G.deco) o.visible = true;
   G.wasPlan = plan; G.crowd.visible = !plan; G.backdrop.visible = !plan; G.crew.groups.forEach(c => { if (plan) c.g.visible = false; }); G.bloom.strength = plan ? 0.22 : 0.5;
   // phone lights twinkle
@@ -483,7 +484,7 @@ function loop(now) {
 window.renderAt = (t, cam) => { S.t = t; if (cam) { G.fly = null; G.ctl.autoRotate = false; G.cam.position.set(...cam.p); G.ctl.target.set(...cam.t); } frameUI(t * 1000); };
 
 async function init() {
-  S.d = await fetch("data/stage.json?v=18").then(r => r.json());
+  S.d = await fetch("data/stage.json?v=20").then(r => r.json());
   for (const m of S.d.members) { m.pastel = m.color; m.color = VIVID[m.key] || m.color; }
   S.on = new Set(S.d.members.map(m => m.key));
   S.STOPS = stops();
@@ -530,15 +531,15 @@ function setMode(md) { document.querySelectorAll(".modes button").forEach(x => x
 const M = n => S.d.members.find(m => m.name.startsWith(n));
 const FIND = [
   { k: "Sueda", lab: "Centre stage", big: "46%", txt: "of the moments with all six in view, she is closest to the centre line" },
-  { k: "Hilal", lab: "Closest to the crowd", big: "41%", txt: "of the time she is the one nearest the audience" },
+  { k: "Hilal", k2: "Zeynep", lab: "Side by side", big: "79%", txt: "of the song Hilal's nearest neighbour is Zeynep" },
   { k: "Sueda", lab: "Most ground", big: "79 m", txt: "walked in one song (Esin: 61 m)" }];
 function story() {
   $("#fcards").innerHTML = FIND.map((f, i) => { const m = M(f.k); return `<button class="fcard" data-i="${i}" style="--c:${m.color}">
-    <span class="lab">${f.lab}</span><span class="nm"><i></i>${m.name.split(" ")[0]}</span><b>${f.big}</b><span class="tx">${f.txt}</span></button>`; }).join("");
+    <span class="lab">${f.lab}</span><span class="nm"><i></i>${m.name.split(" ")[0]}${f.k2 ? ` & ${f.k2}` : ""}</span><b>${f.big}</b><span class="tx">${f.txt}</span></button>`; }).join("");
   document.querySelectorAll(".fcard").forEach(b => b.onclick = () => {
     const f = FIND[+b.dataset.i], on = b.classList.toggle("on");
     document.querySelectorAll(".fcard").forEach(x => x !== b && x.classList.remove("on"));
-    if (on) { setOn([M(f.k).key]); setMode("all"); setView("top"); } else { setOn(); setMode("acc"); }
+    if (on) { setOn([M(f.k).key, ...(f.k2 ? [M(f.k2).key] : [])]); setMode("all"); setView("top"); } else { setOn(); setMode("acc"); }
   });
   $("#tour").onclick = () => tour(0); $("#tnext").onclick = () => tour(S.ts + 1); $("#tback").onclick = () => tour(S.ts - 1); $("#tclose").onclick = () => tour(-1);
 }
@@ -551,7 +552,7 @@ function tour(k) {
   const steps = [
     { t: 28, v: "audience", on: null, md: "acc", txt: `0:27 · Out of the dark, the song opens with <b>all six on a raised platform</b>, 3.3 m up and only half a metre apart; at 0:32 they open out to both sides. Each colour is one member. Wherever she stands still, a circle grows.` },
     { t: 170, v: "top", on: [su.key], md: "acc", txt: `1:05–3:42 · The main stage. ${c(su)} holds the <b>centre</b> more than anyone: in 46% of the moments with all six in view she is closest to the centre line. She also walks the most, <b>79 m</b>.` },
-    { t: 240, v: "top", on: [hi.key], md: "all", txt: `3:42 · All six run down the 7.5 m runway to the front block. ${c(hi)} is the one <b>nearest the crowd</b>, 41% of the song. Press play to watch it with the video, or tap a name below.` }];
+    { t: 240, v: "top", on: [hi.key, M("Zeynep").key], md: "all", txt: `3:42 · All six run down the 7.5 m runway to the front block, in one line. ${c(hi)} and ${c(M("Zeynep"))} are the closest pair of the song: <b>79%</b> of the time they are each other's nearest neighbour. Press play to watch it with the video, or tap a name below.` }];
   const st = steps[k]; setT(st.t, true); setView(st.v); setOn(st.on); setMode(st.md);
   $("#tstep").textContent = `Tour · ${k + 1} / 3`; $("#ttext").innerHTML = st.txt;
   $("#tback").disabled = k === 0; $("#tnext").textContent = k === 2 ? "explore ✓" : "next →";

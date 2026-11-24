@@ -22,7 +22,7 @@ await p.evaluate(() => {
   const d = document.createElement("div"); d.id = "cv"; document.body.appendChild(d);
   d.innerHTML = `<div class="q">Who owns the stage?</div>
     <div class="c"><span class="l">Centre stage</span><span class="n" style="color:${su.color}"><i></i>Sueda</span><b>46%</b></div>
-    <div class="c"><span class="l">Closest to crowd</span><span class="n" style="color:${hi.color}"><i></i>Hilal</span><b>41%</b></div>
+    <div class="c"><span class="l">Side by side</span><span class="n" style="color:${hi.color}"><i></i>Hilal &amp; Zeynep</span><b>79%</b></div>
     <div class="c"><span class="l">Most ground</span><span class="n" style="color:${su.color}"><i></i>Sueda</span><b>79 m</b></div>`;
   S.mode = "all"; S.heatKey = ""; G.view = "top";
   renderAt(296, { p: [0, 41, 0.2], t: [0, 0, -1.4] });
