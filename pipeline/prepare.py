@@ -255,7 +255,8 @@ for nm, ks in DESC.items():
 F = {
     "v_0109": ((67.0, 69.5), {"Sueda": (12.0, 7.3), "Zeynep Oktay": (10.2, 6.3), "Hilal": (13.8, 6.3), "Esin": (8.6, 5.3), "Lidya": (12.0, 4.4), "Mina": (15.4, 5.3)}),   # from 1:06 Lidya walks to the very back, Sueda to the tip
     "l_0110": ((70.5, 77.5), {"Esin": (7.6, 6.6), "Zeynep Oktay": (9.8, 6.6), "Hilal": (12.0, 7.4), "Sueda": (14.2, 6.6), "Mina": (16.4, 6.6), "Lidya": (12.0, 5.6)}),   # 1:10-1:13: Hilal steps out in front, Lidya hidden right behind her (with Barış)
-    "r_0122": ((78.5, 86.0), {"Hilal": (7.0, 6.6), "Zeynep Oktay": (9.0, 5.8), "Esin": (11.0, 7.4), "Mina": (13.0, 5.8), "Lidya": (15.0, 6.6), "Sueda": (17.0, 5.8)}),   # 1:18-1:25: Esin in front, Hilal and Lidya one row back, Zeynep, Mina, Sueda at the back (with Barış)
+    "r_0122": ((78.5, 87.5), {"Hilal": (7.0, 6.6), "Zeynep Oktay": (9.0, 5.8), "Esin": (11.0, 7.4), "Mina": (13.0, 5.8), "Lidya": (15.0, 6.6), "Sueda": (17.0, 5.8)}),   # 1:18-1:25: Esin in front, Hilal and Lidya one row back, Zeynep, Mina, Sueda at the back (with Barış)
+    "f_0129": ((89.0, 106.0), {"Zeynep Oktay": (7.5, 7.0), "Mina": (10.5, 7.0), "Sueda": (13.5, 7.0), "Hilal": (16.5, 7.0), "Lidya": (12.0, 5.9), "Esin": (12.0, 4.7)}),   # 1:29-1:46: four in front, Lidya behind the gap between Mina and Sueda, Esin behind her (with Barış)
     "w_0231": ((150.5, 162.5), {"Zeynep Oktay": (4.6, 6.8), "Sueda": (6.6, 6.8), "Hilal": (12.0, 7.3), "Esin": (12.0, 5.2), "Lidya": (17.4, 6.8), "Mina": (19.4, 6.8)}),
     "l_0244": ((163.5, 170.0), {"Hilal": (12.0, 7.3), "Esin": (7.4, 5.2), "Zeynep Oktay": (9.2, 5.2), "Sueda": (11.0, 5.2), "Lidya": (13.9, 5.2), "Mina": (15.7, 5.2)}),
     "final":  ((289.5, 296.0), {"Esin": (8.5, 19.2), "Lidya": (9.9, 19.2), "Mina": (11.3, 19.2), "Sueda": (12.7, 19.2), "Zeynep Oktay": (14.1, 19.2), "Hilal": (15.5, 19.2)}),
@@ -290,7 +291,7 @@ for j, m in enumerate(_order):
             r[1] = round(r[1] + a * (tx - r[1]), 2); r[2] = round(r[2] + a * (ty - r[2]), 2)
 # wide lines seen on the wide shots: the notes squeeze them. In these windows the six stand evenly spaced across the width the
 # video shows, around the line's own centre and in the same left-to-right order.
-SPREAD = [(89.5, 106.0, 11.0)]
+SPREAD = []     # 1:29-1:46 is now the formation f_0129
 for va, vb, span in SPREAD:
     for k, v in enumerate(_vt):
         if not (va - 1 <= v <= vb + 1): continue
