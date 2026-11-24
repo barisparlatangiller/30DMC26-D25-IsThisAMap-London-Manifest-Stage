@@ -259,7 +259,7 @@ function buildScene() {
 const VIEWS = { audience: { p: [0, 15, 33], t: [0, -0.5, -1] }, top: { p: [0, 45, 0.8], t: [0, 0, -0.6] }, side: { p: [-36, 15, 12], t: [0, 0, 2.5] }, orbit: null };
 function setView(v, now) {
   document.querySelectorAll(".views button").forEach(b => b.classList.toggle("on", b.dataset.view === v));
-  G.view = v; G.ctl.autoRotate = v === "orbit"; G.ctl.autoRotateSpeed = 0.7;
+  G.view = v; document.body.classList.toggle("topv", v === "top"); G.ctl.autoRotate = v === "orbit"; G.ctl.autoRotateSpeed = 0.7;
   if (!v || v === "orbit") { G.fly = null; if (v === "orbit" && G.cam.position.y > 20) G.fly = { from: G.cam.position.clone(), ft: G.ctl.target.clone(), to: new THREE.Vector3(...VIEWS.audience.p), tt: new THREE.Vector3(...VIEWS.audience.t), t0: performance.now() }; return; }
   const to = new THREE.Vector3(...VIEWS[v].p), tt = new THREE.Vector3(...VIEWS[v].t);
   if (now) { G.cam.position.copy(to); G.ctl.target.copy(tt); G.ctl.update(); return; }
@@ -506,7 +506,45 @@ async function init() {
     if (e.key === ",") $("#nudgeM").click(); if (e.key === ".") $("#nudgeP").click(); if (e.key === "Escape") { $("#drawer").hidden = true; $("#ana").hidden = true; }
   });
   document.fonts?.ready.then(() => { for (const m of S.d.members) { const P = G.p[m.key], o = P.lbl; P.grp.remove(o); P.lbl = labelSprite(m.name.split(" ")[0]); P.lbl.position.copy(o.position); P.grp.add(P.lbl); } lanes(); });
+  story();
   S.ready = true;
   if (VID) frameUI(0); else requestAnimationFrame(loop);
 }
+// ---- story layer: three findings and a guided tour (for fans and first-time visitors) ----
+function setOn(keys) {
+  S.on = new Set(keys || S.d.members.map(m => m.key));
+  $("#cast").querySelectorAll(".chip").forEach(x => { x.classList.toggle("off", !S.on.has(x.dataset.k)); x.classList.toggle("solo", S.on.size < S.d.members.length && S.on.has(x.dataset.k)); });
+  S.dirty = true;
+}
+function setMode(md) { document.querySelectorAll(".modes button").forEach(x => x.classList.toggle("on", x.dataset.mode === md)); S.mode = md; S.dirty = true; }
+const M = n => S.d.members.find(m => m.name.startsWith(n));
+const FIND = [
+  { k: "Sueda", lab: "Centre stage", big: "46%", txt: "of the moments she is the one closest to the centre line" },
+  { k: "Hilal", lab: "Closest to the crowd", big: "46%", txt: "of the time she is the one nearest the audience" },
+  { k: "Sueda", lab: "Most ground", big: "79 m", txt: "walked in one song (Esin: 61 m)" }];
+function story() {
+  $("#fcards").innerHTML = FIND.map((f, i) => { const m = M(f.k); return `<button class="fcard" data-i="${i}" style="--c:${m.color}">
+    <span class="lab">${f.lab}</span><span class="nm"><i></i>${m.name.split(" ")[0]}</span><b>${f.big}</b><span class="tx">${f.txt}</span></button>`; }).join("");
+  document.querySelectorAll(".fcard").forEach(b => b.onclick = () => {
+    const f = FIND[+b.dataset.i], on = b.classList.toggle("on");
+    document.querySelectorAll(".fcard").forEach(x => x !== b && x.classList.remove("on"));
+    if (on) { setOn([M(f.k).key]); setMode("all"); setView("top"); } else { setOn(); setMode("acc"); }
+  });
+  $("#tour").onclick = () => tour(0); $("#tnext").onclick = () => tour(S.ts + 1); $("#tback").onclick = () => tour(S.ts - 1); $("#tclose").onclick = () => tour(-1);
+}
+function tour(k) {
+  const box = $("#tourbox");
+  if (S.ytReady && S.playing) S.yt.pauseVideo(); S.playing = false; playIcon();
+  if (k < 0 || k > 2) { S.ts = -1; box.hidden = true; document.body.classList.remove("touring"); setOn(); setMode("acc"); setView("top"); return; }
+  S.ts = k; box.hidden = false; document.body.classList.add("touring");
+  const su = M("Sueda"), hi = M("Hilal"), c = m => `<b style="color:${m.color}">${m.name.split(" ")[0]}</b>`;
+  const steps = [
+    { t: 30, v: "audience", on: null, md: "acc", txt: `0:27 · The song opens with <b>all six on a raised platform</b>, 3.3 m up and only half a metre apart. Each colour is one member. Wherever she stands still, a circle grows.` },
+    { t: 170, v: "top", on: [su.key], md: "acc", txt: `1:05–3:44 · The main stage. ${c(su)} holds the <b>centre</b> more than anyone: in 46% of the moments she is closest to the centre line. She also walks the most, <b>79 m</b>.` },
+    { t: 240, v: "top", on: [hi.key], md: "all", txt: `3:44 · All six run down the 7.5 m runway to the front block. ${c(hi)} is the one <b>nearest the crowd</b>, 46% of the song. Press play to watch it with the video, or tap a name below.` }];
+  const st = steps[k]; setT(st.t, true); setView(st.v); setOn(st.on); setMode(st.md);
+  $("#tstep").textContent = `Tour · ${k + 1} / 3`; $("#ttext").innerHTML = st.txt;
+  $("#tback").disabled = k === 0; $("#tnext").textContent = k === 2 ? "explore ✓" : "next →";
+}
+window.APP25 = { tour, setOn, setMode };
 init();

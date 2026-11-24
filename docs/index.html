@@ -8,7 +8,7 @@
 <meta name="theme-color" content="#0a0716">
 <link rel="preload" href="fonts/manrope-latin-800-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/manrope-latin-500-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link href="style.css?v=34" rel="stylesheet">
+<link href="style.css?v=35" rel="stylesheet">
 </head>
 <body>
 <div class="haze" aria-hidden="true"><i></i><i></i><i></i></div>
@@ -18,7 +18,15 @@
   <div class="eb">#30DayMapChallenge <span>·</span> Day 25 <span>·</span> Is this a map?</div>
   <h1>Is a stage <em>a map?</em></h1>
   <p class="sub"><b>Manifest</b> · <i>Intro &amp; Hileli</i> · live at OVO Arena Wembley, London</p>
+<section class="story" id="story">
+  <p class="who6"><b>Manifest</b> is a six-member Turkish girl group. I followed all six through one live song, every 2 seconds, and put them on a stage plan in metres. So the song draws its own map, like the heat maps of players in a football match.</p>
+  <h2>Who owns the stage?</h2>
+  <div class="fc" id="fcards"></div>
+  <button id="tour" class="tourbtn">▶ Take the 30-second tour</button>
+</section>
 </header>
+
+<div id="tourbox" hidden><div class="tstep" id="tstep"></div><div id="ttext"></div><div class="tnav"><button id="tback">← back</button><button id="tclose">end ✕</button><button id="tnext" class="pri">next →</button></div></div>
 
 <aside class="vcard" id="vcard">
   <div class="vhead"><span class="live"><i></i>LIVE</span><span>OVO Arena Wembley</span><button id="vmin" class="ghost" title="Hide the video" aria-label="Hide the video">–</button></div>
@@ -96,6 +104,6 @@
   </div>
 </div>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
-<script type="module" src="app.js?v=49"></script>
+<script type="module" src="app.js?v=50"></script>
 </body>
 </html>
