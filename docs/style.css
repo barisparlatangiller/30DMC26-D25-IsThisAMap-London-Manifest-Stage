@@ -233,3 +233,4 @@ body.sil .chip { --c: #4a4458 !important; } body.sil .chip i { filter: grayscale
 
 .eb a.lang { margin-left: 8px; padding: 1px 8px; border: 1px solid rgba(255,255,255,.3); border-radius: 999px; color: #fff; text-decoration: none; font-weight: 700; letter-spacing: .06em; }
 .eb a.lang:hover { background: rgba(255,255,255,.12); }
+body.vid .eb a.lang { display: none; }
