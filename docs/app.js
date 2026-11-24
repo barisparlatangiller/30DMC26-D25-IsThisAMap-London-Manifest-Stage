@@ -485,7 +485,7 @@ function loop(now) {
 window.renderAt = (t, cam) => { S.t = t; if (cam) { G.fly = null; G.ctl.autoRotate = false; G.cam.position.set(...cam.p); G.ctl.target.set(...cam.t); } frameUI(t * 1000); };
 
 async function init() {
-  S.d = await fetch("data/stage.json?v=21").then(r => r.json());
+  S.d = await fetch("data/stage.json?v=22").then(r => r.json());
   for (const m of S.d.members) { m.pastel = m.color; m.color = VIVID[m.key] || m.color; }
   S.on = new Set(S.d.members.map(m => m.key));
   S.STOPS = stops();
@@ -534,8 +534,8 @@ function setOn(keys) {
 function setMode(md) { document.querySelectorAll(".modes button").forEach(x => x.classList.toggle("on", x.dataset.mode === md)); S.mode = md; S.dirty = true; }
 const M = n => S.d.members.find(m => m.name.startsWith(n));
 const FIND = [
-  { k: "Sueda", lab: "Centre stage", big: "46%", txt: "of the moments with all six in view, she is closest to the centre line" },
-  { k: "Hilal", k2: "Zeynep", lab: "Side by side", big: "79%", txt: "of the song Hilal's nearest neighbour is Zeynep" },
+  { k: "Esin", k2: "Hilal", lab: "The two edges", big: "≈60%", txt: "of the moments with all six in view, Esin is the leftmost (59%) and Hilal the rightmost (64%)" },
+  { k: "Hilal", k2: "Zeynep", lab: "Side by side", big: "80%", txt: "of the song Hilal's nearest neighbour is Zeynep" },
   { k: "Sueda", lab: "Most ground", big: "79 m", txt: "walked in one song (Esin: 61 m)" }];
 function story() {
   $("#fcards").innerHTML = FIND.map((f, i) => { const m = M(f.k); return `<button class="fcard" data-i="${i}" style="--c:${m.color}">
@@ -555,8 +555,8 @@ function tour(k) {
   const su = M("Sueda"), hi = M("Hilal"), c = m => `<b style="color:${m.color}">${m.name.split(" ")[0]}</b>`;
   const steps = [
     { t: 28, v: "audience", on: null, md: "acc", txt: `0:27 · Out of the dark, the song opens with <b>all six on a raised platform</b>, 3.3 m up and only half a metre apart; at 0:32 they open out to both sides. Each colour is one member. Wherever she stands still, a circle grows.` },
-    { t: 170, v: "top", on: [su.key], md: "acc", txt: `1:05–3:42 · The main stage. ${c(su)} holds the <b>centre</b> more than anyone: in 46% of the moments with all six in view she is closest to the centre line. She also walks the most, <b>79 m</b>.` },
-    { t: 240, v: "top", on: [hi.key, M("Zeynep").key], md: "all", txt: `3:42 · All six run down the 7.5 m runway to the front block, in one line. ${c(hi)} and ${c(M("Zeynep"))} are the closest pair of the song: <b>79%</b> of the time they are each other's nearest neighbour. Press play to watch it with the video, or tap a name below.` }];
+    { t: 170, v: "top", on: [M("Esin").key, hi.key, su.key], md: "acc", txt: `1:05–3:42 · The main stage. The <b>edges</b> have owners: ${c(M("Esin"))} holds the left end of the line, ${c(hi)} the right. The middle changes hands. ${c(su)} walks the most, <b>79 m</b> in one song.` },
+    { t: 240, v: "top", on: [hi.key, M("Zeynep").key], md: "all", txt: `3:42 · All six run down the 7.5 m runway in three rows and end in one line on the front block. ${c(hi)} and ${c(M("Zeynep"))} are the closest pair of the song: <b>80%</b> of the time they are each other's nearest neighbour. Press play to watch it with the video, or tap a name below.` }];
   const st = steps[k]; setT(st.t, true); setView(st.v); setOn(st.on); setMode(st.md);
   $("#tstep").textContent = `Tour · ${k + 1} / 3`; $("#ttext").innerHTML = st.txt;
   $("#tback").disabled = k === 0; $("#tnext").textContent = k === 2 ? "explore ✓" : "next →";

@@ -50,7 +50,7 @@ area grows with the time spent (2 s: 0.5 m across, 30 s: 2 m, 60 s: 2.8 m); stop
 The positions were noted on a clock that drifts against the published video. `prepare.py` stores ten anchor moments (`WARP_`),
 checked by eye against the video and confirmed again on 24 Nov: silhouettes 0:27, first step down 0:56, all six on the main stage
 1:09, solo 2:31, regroup 2:44, front edge 3:33, the run 3:42, front block 3:48, widest line 4:15, final pose 4:54.
-The formations at 1:09 (V), 2:31 and 2:44 (pairs on the sides, Hilal centre front), 3:33 (W) and the run in three rows at 3:42
+The formations at 1:09 (V), 2:31 and 2:44 (pairs on the sides, Hilal centre front), 3:33 (W, briefly; by 3:35 one wide line with Zeynep and Hilal at the right end) and the run in three rows at 3:42
 were read again from the video and override the notes in those windows (step 6 in `prepare.py`). The stage stays dark until 0:27
 and the six open out on the platform from 0:32.
 

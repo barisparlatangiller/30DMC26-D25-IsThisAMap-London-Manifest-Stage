@@ -237,7 +237,7 @@ F = {
     "w_0231": ((150.5, 162.5), {"Zeynep Oktay": (4.6, 6.8), "Sueda": (6.6, 6.8), "Hilal": (12.0, 7.3), "Esin": (12.0, 5.2), "Lidya": (17.4, 6.8), "Mina": (19.4, 6.8)}),
     "l_0244": ((163.5, 170.0), {"Hilal": (12.0, 7.3), "Esin": (7.4, 5.2), "Zeynep Oktay": (9.2, 5.2), "Sueda": (11.0, 5.2), "Lidya": (13.9, 5.2), "Mina": (15.7, 5.2)}),
     "final":  ((289.5, 296.0), {"Esin": (8.5, 19.2), "Lidya": (9.9, 19.2), "Mina": (11.3, 19.2), "Sueda": (12.7, 19.2), "Zeynep Oktay": (14.1, 19.2), "Hilal": (15.5, 19.2)}),
-    "w_0333": ((210.5, 221.9), {"Lidya": (8.6, 7.3), "Zeynep Oktay": (12.0, 7.4), "Hilal": (15.4, 7.3), "Esin": (10.3, 5.9), "Mina": (12.0, 5.9), "Sueda": (13.7, 5.9)}),
+    "w_0333": ((210.5, 214.0), {"Lidya": (8.6, 7.3), "Zeynep Oktay": (12.0, 7.4), "Hilal": (15.4, 7.3), "Esin": (10.3, 5.9), "Mina": (12.0, 5.9), "Sueda": (13.7, 5.9)}),
 }
 RUN = {"Lidya": (12.0, 10.6), "Mina": (10.7, 9.3), "Sueda": (12.5, 9.3), "Zeynep Oktay": (13.9, 9.3), "Esin": (9.7, 8.1), "Hilal": (14.5, 8.1)}   # 3:42, three rows
 _vt = [float(np.interp(r[0], _wa[:, 0], _wa[:, 1])) for r in members[0]["s"]]
@@ -268,13 +268,20 @@ for j, m in enumerate(_order):
             r[1] = round(r[1] + a * (tx - r[1]), 2); r[2] = round(r[2] + a * (ty - r[2]), 2)
 # wide lines seen on the wide shots: the notes squeeze them. In these windows the six stand evenly spaced across the width the
 # video shows, around the line's own centre and in the same left-to-right order.
-SPREAD = [(89.5, 106.0, 11.0)]
-for va, vb, span in SPREAD:
+SPREAD = [(89.5, 106.0, 11.0, None), (124.0, 128.5, 12.0, None), (132.0, 134.5, 7.0, None), (179.0, 182.5, 14.0, "last:Zeynep Oktay"),
+          (186.0, 190.0, 9.0, None), (195.0, 201.0, 12.0, None),
+          # 3:35-3:41: the W breaks up into one wide line, Zeynep and Hilal at the right end; 3:49-4:48: one even line on the front block
+          (215.5, 221.5, 13.0, "tail:Zeynep Oktay,Hilal"), (229.0, 288.5, 12.0, "c:12")]       # checked on the wide shots at ¼ speed, 24 Nov
+for va, vb, span, rule in SPREAD:
     for k, v in enumerate(_vt):
         if not (va - 1 <= v <= vb + 1): continue
         a = 1.0 if va <= v <= vb else max(0.0, 1 - min(abs(v - va), abs(v - vb)))
         xs = [m["s"][k][1] for m in members]; c = (max(xs) + min(xs)) / 2
-        for j, m in enumerate(sorted(members, key=lambda m: m["s"][k][1])):
+        if rule and rule.startswith("c:"): c = float(rule[2:])          # the front block is centred on the stage axis
+        ordm = sorted(members, key=lambda m: m["s"][k][1])
+        if rule and rule.split(":")[0] in ("last", "tail"):
+            tl = [byname[n] for n in rule.split(":", 1)[1].split(",")]; ordm = [m for m in ordm if m not in tl] + tl
+        for j, m in enumerate(ordm):
             r = m["s"][k]; tx = min(23.0, max(1.0, c + (j - 2.5) * span / 5)); r[1] = round(r[1] + a * (tx - r[1]), 2)
 
 # 8) every place sits on a corner of a 25 cm grid (24 Nov, with Barış). The grid is aligned with the national grid (EPSG:27700,
@@ -366,12 +373,15 @@ def relations(d):
     M = d["members"]; n = len(M); first = lambda m: m["name"].split(" ")[0]
     P = np.array([[[s[1], s[2]] for s in m["s"]] for m in M]); V = np.array([[s[5] != "g" for s in m["s"]] for m in M])
     allv = V.all(0)
-    front = np.zeros(n); centre = np.zeros(n); nb = np.zeros((n, n)); side = np.zeros(n); cnt = 0
+    front = np.zeros(n); centre = np.zeros(n); left = np.zeros(n); right = np.zeros(n); nb = np.zeros((n, n)); side = np.zeros(n); cnt = 0
     for k in np.where(allv)[0]:
         cnt += 1
         fy = np.sort(P[:, k, 1]); cx = np.sort(np.abs(P[:, k, 0] - d["w"] / 2))
         if fy[-1] - fy[-2] > 0.3: front[np.argmax(P[:, k, 1])] += 1           # a clear front-runner only, not a tie on one line
         if cx[1] - cx[0] > 0.3: centre[np.argmin(np.abs(P[:, k, 0] - d["w"] / 2))] += 1
+        xs = np.sort(P[:, k, 0])
+        if xs[1] - xs[0] > 0.3: left[np.argmin(P[:, k, 0])] += 1                 # a clear edge only
+        if xs[-1] - xs[-2] > 0.3: right[np.argmax(P[:, k, 0])] += 1
         D = np.linalg.norm(P[:, None, k] - P[None, :, k], axis=2); np.fill_diagonal(D, 1e9)
         for i in range(n): nb[i, np.argmin(D[i])] += 1
         order = np.argsort(P[:, k, 0]); side[order] += np.arange(n)
@@ -379,16 +389,16 @@ def relations(d):
     for i, m in enumerate(M):
         j = int(np.argmax(nb[i])); lr = side[i] / (n - 1)
         m["rel"] = {"front_pct": round(100 * front[i] / cnt), "centre_pct": round(100 * centre[i] / cnt),
+                    "left_pct": round(100 * left[i] / cnt), "right_pct": round(100 * right[i] / cnt),
                     "neighbour": first(M[j]), "neighbour_pct": round(100 * nb[i, j] / cnt),
                     "side": "left" if lr < 0.4 else "right" if lr > 0.6 else "centre", "lr": round(float(lr), 2)}
-    f = max(M, key=lambda m: m["rel"]["front_pct"]); c = max(M, key=lambda m: m["rel"]["centre_pct"])
+    L = max(M, key=lambda m: m["rel"]["left_pct"]); R = max(M, key=lambda m: m["rel"]["right_pct"])
     pairs = sorted({tuple(sorted((first(m), m["rel"]["neighbour"]))) for m in M if
                     next(x for x in M if first(x) == m["rel"]["neighbour"])["rel"]["neighbour"] == first(m)})
     lineup = " · ".join(first(m) for m in sorted(M, key=lambda m: m["rel"]["lr"]))
     facts = [
         {"t": None, "title": "The line-up", "text": f"Seen from the audience, left to right, the usual order is {lineup}. It hardly changes all song."},
-        {"t": None, "title": "Centre stage", "text": f"{first(c)} is the one closest to the centre line in {c['rel']['centre_pct']}% of the moments when all six are visible."},
-        {"t": None, "title": "Closest to the crowd", "text": f"{first(f)} is the one nearest the audience {f['rel']['front_pct']}% of the time."},
+        {"t": None, "title": "The edges", "text": f"With all six in view, {first(L)} is the leftmost in {L['rel']['left_pct']}% of the moments and {first(R)} the rightmost in {R['rel']['right_pct']}%. The centre has no owner: it changes hands."},
     ]
     if pairs:
         facts.append({"t": None, "title": "Always side by side",
