@@ -165,7 +165,7 @@ export function updateSet(X, { r, scene, S, t, now, G, pos, W3, BASE }) {
   for (const h of X.heads) {
     const ph = t * 0.55 + h.i * 0.8, side = h.x < 0 ? 1 : -1;
     h.pivot.rotation.z = side * (0.35 + 0.25 * Math.sin(ph)); h.pivot.rotation.x = 0.25 * Math.sin(ph * 0.7 + h.i);
-    h.cone.material.color.setHex(col); h.cone.material.opacity = 0.11 + 0.05 * Math.sin(ph * 1.7);
+    h.cone.material.color.setHex(S.beamCols ? S.beamCols[h.i % S.beamCols.length] : col); h.cone.material.opacity = 0.11 + 0.05 * Math.sin(ph * 1.7);
   }
   // haze drift
   X.haze.forEach((m, k) => { m.material.map.offset.x = (t * 0.008 * (k + 1)) % 1; m.material.map.offset.y = (t * 0.003 * (k + 1)) % 1; });

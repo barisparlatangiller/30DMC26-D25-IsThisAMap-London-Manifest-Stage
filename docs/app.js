@@ -7,7 +7,7 @@ import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
-import { buildSet, updateSet, makeFigure, poseFigure } from "./set.js?v=4";
+import { buildSet, updateSet, makeFigure, poseFigure } from "./set.js?v=5";
 
 const ZN = document.documentElement.lang === "tr" ? { platform: "Platform", merdiven: "Merdiven", ana_sahne_on: "Ana sahne", runway: "Runway", on_blok: "Ön blok" }
   : { platform: "Platform", merdiven: "Stairs", ana_sahne_on: "Main stage", runway: "Runway", on_blok: "Front block" };
@@ -291,6 +291,15 @@ function resize() {
   lanes(); S.dirty = true;
 }
 
+// who sings when (video seconds, with Barış, from the lyrics): Ajda Pekkan in white, the whole group in all six colours
+const SING = [[26, "ajda"], [58, ["Lidya", "Esin", "Mina"]], [89, ["Sueda", "Lidya"]], [106, ["Hilal", "Zeynep"]], [126, ["Esin", "Hilal"]],
+  [140, ["Mina", "Zeynep", "Sueda", "Lidya"]], [180, "ajda"], [222, "all"]];
+function singerCols(t) {
+  let cur = null; for (const q of SING) if (t >= q[0]) cur = q[1]; if (!cur) return null;
+  if (cur === "ajda") return [0xfff1dc];
+  const ms = cur === "all" ? S.d.members : cur.map(n => S.d.members.find(m => m.name.startsWith(n)));
+  return ms.map(m => new THREE.Color(m.color).getHex());
+}
 // ── one frame ──
 function update(now) {
   const key = `${S.mode}|${S.unc}|${[...S.on].join()}`;
@@ -318,6 +327,7 @@ function update(now) {
       if (o.lbl) o.lbl.visible = sec >= 20 && G.view !== "audience"; } }
   // backing dancers fade in and out with their passages
   { let o = 0; for (const c of G.crew.groups) { const k = Math.min(1, (S.t - c.a) / 1, (c.b - S.t) / 1); c.g.visible = k > 0; if (k > 0) o = Math.max(o, k); } G.crew.mat.opacity = 0.55 * o; }
+  S.beamCols = singerCols(S.t);                                         // the moving-head beams take the colour of whoever sings
   updateSet(G.set, { r: G.r, scene: G.scene, S, t: S.t, now, G, pos, W3, BASE });
   G.r.toneMappingExposure = (G.expo0 ??= G.r.toneMappingExposure) * (S.t >= LIGHTS_ON ? 1 : 0.03);   // all lights on in one frame, as in the video
   const plan = G.view === "top"; if (plan) for (const o of G.deco) o.visible = false; else if (G.wasPlan) for (const o of G.deco) o.visible = true;
