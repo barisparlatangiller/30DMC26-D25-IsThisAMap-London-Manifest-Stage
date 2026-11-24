@@ -258,7 +258,7 @@ F = {
     "r_0122": ((78.5, 87.5), {"Hilal": (7.0, 6.6), "Zeynep Oktay": (9.0, 5.8), "Esin": (11.0, 7.4), "Mina": (13.0, 5.8), "Lidya": (15.0, 6.6), "Sueda": (17.0, 5.8)}),   # 1:18-1:25: Esin in front, Hilal and Lidya one row back, Zeynep, Mina, Sueda at the back (with Barış)
     "f_0129": ((89.0, 106.0), {"Zeynep Oktay": (7.5, 7.0), "Mina": (10.5, 7.0), "Sueda": (13.5, 7.0), "Hilal": (16.5, 7.0), "Lidya": (12.0, 5.9), "Esin": (12.0, 4.7)}),   # 1:29-1:46: four in front, Lidya behind the gap between Mina and Sueda, Esin behind her (with Barış)
     "w_0231": ((150.5, 162.5), {"Zeynep Oktay": (4.6, 6.8), "Sueda": (6.6, 6.8), "Hilal": (12.0, 7.3), "Esin": (12.0, 5.2), "Lidya": (17.4, 6.8), "Mina": (19.4, 6.8)}),
-    "l_0244": ((163.5, 170.0), {"Hilal": (12.0, 7.3), "Esin": (7.4, 5.2), "Zeynep Oktay": (9.2, 5.2), "Sueda": (11.0, 5.2), "Lidya": (13.9, 5.2), "Mina": (15.7, 5.2)}),
+    "l_0244": ((167.5, 170.0), {"Hilal": (12.0, 7.3), "Esin": (7.4, 5.2), "Zeynep Oktay": (9.2, 5.2), "Sueda": (11.0, 5.2), "Lidya": (13.9, 5.2), "Mina": (15.7, 5.2)}),
     "final":  ((289.5, 296.0), {"Esin": (8.5, 19.2), "Lidya": (9.9, 19.2), "Mina": (11.3, 19.2), "Sueda": (12.7, 19.2), "Zeynep Oktay": (14.1, 19.2), "Hilal": (15.5, 19.2)}),
     "w_0333": ((210.5, 221.9), {"Lidya": (8.6, 7.3), "Zeynep Oktay": (12.0, 7.4), "Hilal": (15.4, 7.3), "Esin": (10.3, 5.9), "Mina": (12.0, 5.9), "Sueda": (13.7, 5.9)}),
 }
@@ -316,6 +316,28 @@ for nm, ks in K2.items():
     for r, v in zip(byname[nm]["s"], _vt):
         if not (106.5 <= v <= 126.5): continue
         a = min(1.0, (v - 106.5) / 1.0)                       # one second to leave the 1:29 formation
+        r[1] = round(r[1] + a * (float(np.interp(v, kt, kx)) - r[1]), 2); r[2] = round(r[2] + a * (float(np.interp(v, kt, ky)) - r[2]), 2)
+        r[6] = "ana_sahne_on"
+
+# 7c) 2:06-2:46, step by step with Barış (24 Nov). 2:06 a triangle opening to the back: Mina at the tip, Esin · Lidya · Sueda
+#    behind her, Zeynep and Hilal at the back corners. 2:08 Mina and Sueda swap. 2:11 Lidya drops back between Esin and Sueda.
+#    2:16 Zeynep behind Esin, Hilal behind Mina, Lidya behind Sueda. 2:18-2:20 an arrow: Lidya at the tip, Zeynep and Hilal
+#    behind her, Esin one more back on the left, Sueda and Mina in the back corners. 2:30 pairs on the sides, Hilal in front of
+#    Esin in the middle. 2:32 Hilal walks to the far left end of the line, Esin stays alone in the middle until 2:40. 2:41 Hilal
+#    takes the middle, Esin goes to the front of the left group (Zeynep and Sueda behind her), Lidya and Mina on the right.
+K3 = {
+    "Mina":         [(126.5, 12.0, 7.4), (127.5, 12.0, 7.4), (128.5, 13.2, 6.4), (135.5, 13.2, 6.4), (136.5, 13.6, 6.6), (138.0, 13.6, 6.6), (140.0, 15.6, 5.0), (146.0, 15.6, 5.0), (150.0, 19.4, 6.8), (160.0, 19.4, 6.8), (161.5, 15.0, 6.0)],
+    "Sueda":        [(126.5, 13.2, 6.4), (127.5, 13.2, 6.4), (128.5, 12.0, 7.4), (138.0, 12.0, 7.4), (140.0, 8.4, 5.0), (146.0, 8.4, 5.0), (150.0, 6.6, 6.8), (160.0, 6.6, 6.8), (161.5, 9.0, 5.0)],
+    "Esin":         [(126.5, 10.8, 6.4), (135.5, 10.8, 6.4), (136.5, 10.4, 6.6), (138.0, 10.4, 6.6), (140.0, 9.6, 5.8), (146.0, 9.6, 5.8), (150.0, 12.0, 5.2), (151.5, 12.0, 5.2), (152.5, 12.0, 6.2), (160.0, 12.0, 6.2), (161.5, 9.0, 7.0)],
+    "Lidya":        [(126.5, 12.0, 6.4), (130.5, 12.0, 6.4), (131.5, 11.4, 5.6), (135.5, 11.4, 5.6), (136.5, 12.0, 6.0), (138.0, 12.0, 6.0), (140.0, 12.0, 7.4), (146.0, 12.0, 7.4), (150.0, 17.4, 6.8), (160.0, 17.4, 6.8), (161.5, 15.0, 7.0)],
+    "Zeynep Oktay": [(126.5, 9.6, 5.2), (135.5, 9.6, 5.2), (136.5, 10.4, 5.4), (138.0, 10.4, 5.4), (140.0, 10.8, 6.6), (146.0, 10.8, 6.6), (150.0, 4.6, 6.8), (160.0, 4.6, 6.8), (161.5, 9.0, 6.0)],
+    "Hilal":        [(126.5, 14.4, 5.2), (135.5, 14.4, 5.2), (136.5, 13.6, 5.4), (138.0, 13.6, 5.4), (140.0, 13.2, 6.6), (146.0, 13.2, 6.6), (150.0, 12.0, 7.3), (151.5, 12.0, 7.3), (153.0, 2.6, 6.8), (160.0, 2.6, 6.8), (161.5, 12.0, 7.3)],
+}
+for nm, ks in K3.items():
+    kt = np.array([k[0] for k in ks]); kx = np.array([k[1] for k in ks]); ky = np.array([k[2] for k in ks])
+    for r, v in zip(byname[nm]["s"], _vt):
+        if not (124.5 <= v <= 166.5): continue
+        a = min(1.0, (v - 124.5) / 2.0)                       # two seconds from the 2:02 row into the 2:06 triangle
         r[1] = round(r[1] + a * (float(np.interp(v, kt, kx)) - r[1]), 2); r[2] = round(r[2] + a * (float(np.interp(v, kt, ky)) - r[2]), 2)
         r[6] = "ana_sahne_on"
 
