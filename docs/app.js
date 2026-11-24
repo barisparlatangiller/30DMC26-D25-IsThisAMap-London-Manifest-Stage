@@ -458,7 +458,10 @@ function nowMoment() {
 // ── YouTube: the video is the clock ──
 window.onYouTubeIframeAPIReady = () => {
   S.yt = new YT.Player("yt", { videoId: S.d.video, playerVars: { start: 20, playsinline: 1, rel: 0, modestbranding: 1 },
-    events: { onReady: () => { S.ytReady = true; $("#clockNote").textContent = "In sync: drag the timeline or tap a moment."; },
+    events: { onReady: () => { S.ytReady = true; $("#clockNote").textContent = "In sync: drag the timeline or tap a moment.";
+        if (!VID && !new URLSearchParams(location.search).has("still")) {          // start straight away; browsers only allow it muted
+          S.yt.mute(); S.yt.seekTo(Math.max(0, S.t - S.off), true); S.yt.playVideo();
+          $("#clockNote").textContent = "Playing muted: tap 🔊 in the video for sound. Drag the timeline or tap a moment."; } },
       onStateChange: e => { S.playing = e.data === 1; playIcon(); if (e.data === 1) S.anchor = null; },
       onError: () => { S.ytReady = false; $("#clockNote").textContent = "Video unavailable here: the map runs on its own clock."; } } });
 };
