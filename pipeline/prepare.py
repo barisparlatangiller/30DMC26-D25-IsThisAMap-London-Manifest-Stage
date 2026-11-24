@@ -253,7 +253,8 @@ for nm, ks in DESC.items():
 # 6) formations read from the video by Barış (24 Nov), seen from the audience: x left → right, y toward the crowd.
 #    Inside each window (video seconds) the six stand as listed; 1 s at each edge blends from and back to the notes.
 F = {
-    "v_0109": ((67.0, 70.5), {"Sueda": (12.0, 7.3), "Zeynep Oktay": (10.2, 6.3), "Hilal": (13.8, 6.3), "Esin": (8.6, 5.3), "Lidya": (12.0, 4.4), "Mina": (15.4, 5.3)}),   # from 1:06 Lidya walks to the very back, Sueda to the tip
+    "v_0109": ((67.0, 69.5), {"Sueda": (12.0, 7.3), "Zeynep Oktay": (10.2, 6.3), "Hilal": (13.8, 6.3), "Esin": (8.6, 5.3), "Lidya": (12.0, 4.4), "Mina": (15.4, 5.3)}),   # from 1:06 Lidya walks to the very back, Sueda to the tip
+    "l_0110": ((70.5, 77.5), {"Esin": (7.6, 6.6), "Zeynep Oktay": (9.8, 6.6), "Hilal": (12.0, 7.4), "Sueda": (14.2, 6.6), "Mina": (16.4, 6.6), "Lidya": (12.0, 5.6)}),   # 1:10-1:13: Hilal steps out in front, Lidya hidden right behind her (with Barış)
     "w_0231": ((150.5, 162.5), {"Zeynep Oktay": (4.6, 6.8), "Sueda": (6.6, 6.8), "Hilal": (12.0, 7.3), "Esin": (12.0, 5.2), "Lidya": (17.4, 6.8), "Mina": (19.4, 6.8)}),
     "l_0244": ((163.5, 170.0), {"Hilal": (12.0, 7.3), "Esin": (7.4, 5.2), "Zeynep Oktay": (9.2, 5.2), "Sueda": (11.0, 5.2), "Lidya": (13.9, 5.2), "Mina": (15.7, 5.2)}),
     "final":  ((289.5, 296.0), {"Esin": (8.5, 19.2), "Lidya": (9.9, 19.2), "Mina": (11.3, 19.2), "Sueda": (12.7, 19.2), "Zeynep Oktay": (14.1, 19.2), "Hilal": (15.5, 19.2)}),
