@@ -214,3 +214,8 @@ body.vid .story, body.vid #tourbox { display: none; }
 @media (max-width: 900px) { .story { position: relative; left: auto; top: auto; width: auto; min-width: 0; margin: 10px 16px; order: 0; } .lower3 { top: auto; } #tourbox { bottom: 12px; } }
 .plancard { width: 180px; } body.topv .plancard { opacity: 0; pointer-events: none; } .plancard { transition: opacity .3s; }
 @media (max-height: 820px) and (min-width: 901px) { .plancard { display: none; } .story .who6 { display: none; } }
+body.vid .lower3 { width: auto; }
+#outro { position: fixed; left: 60px; right: 60px; top: 300px; z-index: 20; background: rgba(20,12,43,.94); border: 1px solid var(--edge); border-radius: 28px; padding: 34px 40px 30px; opacity: 0; }
+#outro h2 { font: 800 46px/1.05 Manrope; margin: 0 0 22px; letter-spacing: -.02em; } #outro .r { display: grid; grid-template-columns: 40px 1fr auto; align-items: center; gap: 16px; padding: 14px 0; border-top: 1px solid var(--edge); }
+#outro .r i { width: 30px; height: 30px; border-radius: 50%; box-shadow: 0 0 18px currentColor; } #outro .r span { font-size: 24px; color: var(--ink2); } #outro .r span b { display: block; font: 800 30px Manrope; color: var(--ink); }
+#outro .r em { font: 800 44px Manrope; font-style: normal; } #outro p { font-size: 21px; color: var(--ink3); margin: 18px 0 0; }
