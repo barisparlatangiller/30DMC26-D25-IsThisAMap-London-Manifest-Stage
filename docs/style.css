@@ -221,3 +221,6 @@ body.vid .lower3 { width: auto; }
 #outro .r em { font: 800 44px Manrope; font-style: normal; } #outro p { font-size: 21px; color: var(--ink3); margin: 18px 0 0; }
 .speed { display: flex; gap: 2px; padding: 3px; border-radius: 99px; border: 1px solid var(--edge); } .speed button { border: 0; background: transparent; color: var(--ink2); font: 700 12px Manrope; padding: 6px 9px; border-radius: 99px; cursor: pointer; }
 .speed button.on { background: rgba(255,255,255,.9); color: #140c2b; } body.vid .speed { display: none; }
+
+/* 0:26-0:45: black silhouettes in the video, so no colours yet */
+body.sil .chip { --c: #4a4458 !important; } body.sil .chip i { filter: grayscale(1) brightness(.35); }

@@ -7,7 +7,7 @@ import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
-import { buildSet, updateSet, makeFigure, poseFigure } from "./set.js?v=3";
+import { buildSet, updateSet, makeFigure, poseFigure } from "./set.js?v=4";
 
 const ZN = { platform: "Platform", merdiven: "Stairs", ana_sahne_on: "Main stage", runway: "Runway", on_blok: "Front block" };
 const CELL = 0.2, R = 3.2, TRAIL = 12, TAU = 18, FLOOR = 0.45, HPX = 10;     // heat cell (m), glow radius (m), heat texture px per m
@@ -17,6 +17,7 @@ const VIVID = { Siyah: "#9b6bff", Kizil: "#ff4d5e", Kumral: "#ffc928", Mavi: "#3
 const fmt = t => `${Math.floor(Math.max(0, t) / 60)}:${String(Math.floor(Math.max(0, t) % 60)).padStart(2, "0")}`;
 const hex = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
 const rgba = (h, a) => { const [r, g, b] = hex(h); return `rgba(${r},${g},${b},${a})`; };
+const SIL_END = 45.33;     // until here the six are black silhouettes against the screen; at 45.33 the front light shows who is who (dark at 45.30, lit at 45.35)
 const LIGHTS_ON = 26.05;   // video second when the whole stage lights up at once (checked frame by frame: dark at 26.0, lit at 26.1)
 const VID = new URLSearchParams(location.search).has("video");
 if (VID) document.body.classList.add("vid");
@@ -207,7 +208,7 @@ function buildScene() {
   const pd = Math.max(...parts.platform.poly.map(q => q[1]));
   G.platTex = new THREE.CanvasTexture(htex); G.platTex.colorSpace = THREE.SRGBColorSpace; G.platTex.repeat.set(1, pd / S.d.h); G.platTex.offset.set(0, 1 - pd / S.d.h);
   const pm = new THREE.Mesh(new THREE.PlaneGeometry(S.d.w, pd), new THREE.MeshBasicMaterial({ map: G.platTex, transparent: true, opacity: 1, depthWrite: false }));
-  pm.rotation.x = -Math.PI / 2; pm.position.set(0, ph + 0.012, pd / 2 - S.d.h / 2); scene.add(pm);
+  pm.rotation.x = -Math.PI / 2; pm.position.set(0, ph + 0.012, pd / 2 - S.d.h / 2); scene.add(pm); G.heatM = [fm, pm];
   // arena floor and the crowd's phone lights
   const af = new THREE.Mesh(new THREE.CircleGeometry(60, 64), new THREE.MeshStandardMaterial({ color: 0x05030a, roughness: 1, envMapIntensity: 0 })); af.rotation.x = -Math.PI / 2; af.position.y = floorH - 0.01; scene.add(af);
   const N = 900, cp = new Float32Array(N * 3), cc = new Float32Array(N * 3);
@@ -292,22 +293,24 @@ function resize() {
 function update(now) {
   const key = `${S.mode}|${S.unc}|${[...S.on].join()}`;
   if (Math.abs(S.dt - S.heatT) > 0.08 || key !== S.heatKey) { updateGrids(); paintHeat(); S.heatT = S.dt; S.heatKey = key; }
-  const tEnd = S.mode === "all" ? S.d.t1 : S.dt;
+  const tEnd = S.mode === "all" ? S.d.t1 : S.dt, sil = S.t >= LIGHTS_ON && S.t < SIL_END;
+  for (const o of G.heatM) o.visible = !sil;
   for (const m of S.d.members) {
     const P = G.p[m.key], on = S.on.has(m.key), p = pos(m, S.dt), hidden = p.state === "g";
     const dawn = S.t >= LIGHTS_ON ? 1 : 0;                                // the video opens dark; the six appear with the lights
-    P.grp.visible = on && dawn > 0; G.paths[m.key].visible = on && dawn > 0;
+    P.grp.visible = on && dawn > 0; G.paths[m.key].visible = on && dawn > 0 && !sil;
+    for (const mt of P.fig.mats) mt.uniforms.uSil.value = sil ? 1 : 0;
     if (!on) continue;
     P.grp.position.copy(W3(p.x, p.y, p.z - BASE));
     const full = S.mode !== "all", vis = hidden ? 0.35 : 1;
     if (P.hid !== hidden) { for (const mt of P.fig.mats) { mt.transparent = hidden; mt.opacity = vis; mt.needsUpdate = true; } P.hid = hidden; }
     const prev = P.last || P.grp.position.clone(); poseFigure(P.fig, S.t, P.i, prev.distanceTo(P.grp.position) > 0.02 ? false : false); P.last = P.grp.position.clone();
-    P.beam.visible = false; P.pool.visible = full && !hidden; P.pool.material.opacity = 0.22; P.ring.visible = true; P.lbl.material.opacity = hidden ? 0.6 : 1;
+    P.beam.visible = false; P.pool.visible = full && !hidden && !sil; P.pool.material.opacity = 0.22; P.ring.visible = !sil; P.lbl.visible = !sil; P.lbl.material.opacity = hidden ? 0.6 : 1;
     let n = 0; const arr = S.PATH[m.key]; while (n < arr.length && arr[n][0] <= tEnd) n++; G.paths[m.key].geometry.setDrawRange(0, n);
   }
   // footprints: stops already reached; the current one grows while she stands there
   for (const m of S.d.members) { const on = S.on.has(m.key);
-    for (const o of G.stops[m.key]) { const st = o.st, show = on && S.footprints !== false && st.t0 <= tEnd;
+    for (const o of G.stops[m.key]) { const st = o.st, show = on && !sil && S.footprints !== false && st.t0 <= tEnd;
       o.g.visible = show; if (!show) continue;
       const sec = Math.min(st.t1 + 2, tEnd + 2) - st.t0, r = stopR(sec); o.g.children[0].scale.setScalar(r); o.g.children[1].scale.setScalar(r);
       if (o.lbl) o.lbl.visible = sec >= 20 && G.view !== "audience"; } }
@@ -410,13 +413,13 @@ function drawPlan() {
   g.clearRect(0, 0, W, H); g.save(); g.translate(ox, oy);
   for (const p of S.d.parts) { g.beginPath(); p.poly.forEach(([x, y], i) => i ? g.lineTo(x * k, y * k) : g.moveTo(x * k, y * k)); g.closePath();
     g.fillStyle = p.id === "platform" ? "rgba(60,44,110,.55)" : p.id === "merdiven" ? "rgba(80,60,140,.5)" : "rgba(30,20,62,.7)"; g.fill(); g.strokeStyle = "rgba(236,226,255,.45)"; g.lineWidth = 1 * d; g.stroke(); }
-  g.drawImage(htex, 0, 0, S.d.w * k, S.d.h * k);
+  const sil = S.t >= LIGHTS_ON && S.t < SIL_END; if (!sil) g.drawImage(htex, 0, 0, S.d.w * k, S.d.h * k);
   const tEnd = S.mode === "all" ? S.d.t1 : S.dt;
-  for (const m of S.d.members) { if (!S.on.has(m.key)) continue;
+  for (const m of S.d.members) { if (!S.on.has(m.key) || sil) continue;
     for (const st of S.STOPS[m.key]) { if (st.t0 > tEnd) continue; const r = stopR(Math.min(st.t1 + 2, tEnd + 2) - st.t0) * k;
       g.beginPath(); g.arc(st.x * k, st.y * k, r, 0, 7); g.fillStyle = rgba(m.color, 0.45); g.fill(); g.lineWidth = 1 * d; g.strokeStyle = m.color; g.stroke(); } }
   for (const m of S.d.members) { if (!S.on.has(m.key)) continue; const p = pos(m, S.dt), hidden = p.state === "g";
-    g.beginPath(); g.arc(p.x * k, p.y * k, 4.2 * d, 0, 7); g.fillStyle = hidden ? "rgba(20,14,40,.8)" : m.color; g.fill(); g.lineWidth = 1.4 * d; g.strokeStyle = hidden ? m.color : "#fff"; g.stroke(); }
+    g.beginPath(); g.arc(p.x * k, p.y * k, 4.2 * d, 0, 7); g.fillStyle = sil ? "#08060c" : hidden ? "rgba(20,14,40,.8)" : m.color; g.fill(); g.lineWidth = 1.4 * d; g.strokeStyle = sil ? "rgba(236,226,255,.5)" : hidden ? m.color : "#fff"; g.stroke(); }
   g.restore();
 }
 
@@ -462,6 +465,7 @@ window.onYouTubeIframeAPIReady = () => {
 function playIcon() { $("#playIcon").setAttribute("d", S.playing ? "M7 5h3.5v14H7zM13.5 5H17v14h-3.5z" : "M8 5v14l11-7z"); }
 function setT(t, seek) { S.t = Math.max(T0, Math.min(T1, t)); S.dirty = true; S.anchor = null; if (seek && S.ytReady) S.yt.seekTo(Math.max(0, S.t - S.off), true); }
 function frameUI(now) {
+  const silN = S.t >= LIGHTS_ON && S.t < SIL_END; if (silN !== S.sil) { S.sil = silN; document.body.classList.toggle("sil", silN); }
   const dark = S.t < LIGHTS_ON; if (dark !== S.dark) { S.dark = dark; G.el.style.filter = dark ? "brightness(0.04)" : ""; }   // the whole stage, lines included
   S.dt = toData(S.t); render(now); nowZones(); nowMoment();
   $("#time").value = S.t; $("#clock").textContent = fmt(S.t); $("#head").style.left = `${(100 * (S.t - T0) / (T1 - T0)).toFixed(3)}%`;

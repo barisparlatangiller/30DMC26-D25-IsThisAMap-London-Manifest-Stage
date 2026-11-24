@@ -25,20 +25,21 @@ const PROF = [[0, 0], [0.085, 0], [0.09, 0.06], [0.075, 0.36], [0.085, 0.5], [0.
 const VS = `varying vec3 vN; varying vec3 vV; varying float vY;
   void main(){ vec4 wp = modelMatrix*vec4(position,1.); vY = position.y; vN = normalize(normalMatrix*normal);
     vec4 mv = viewMatrix*wp; vV = normalize(-mv.xyz); gl_Position = projectionMatrix*mv; }`;
-const FS = `uniform vec3 uBoot, uSkirt, uTop, uSkin, uAcc; uniform float uOp, uHair; varying vec3 vN; varying vec3 vV; varying float vY;
+const FS = `uniform vec3 uBoot, uSkirt, uTop, uSkin, uAcc; uniform float uOp, uHair, uSil; varying vec3 vN; varying vec3 vV; varying float vY;
   void main(){
     vec3 c = uHair > .5 ? uTop : (vY < .74 ? uBoot : vY < .985 ? uSkirt : vY < 1.405 ? uTop : uSkin);
     if (uHair < .5 && vY < .5 && vY > .44) c = uSkin;                          // a sliver of knee above the boots
     float lam = .55 + .45*max(dot(vN, normalize(vec3(.3,.8,.6))), 0.);       // soft key light from the front-top
     float fr = pow(1. - max(dot(vN, vV), 0.), 2.4);                            // rim in her colour
     vec3 col = c*lam*.95 + uAcc*fr*1.35 + vec3(1.)*pow(fr, 6.)*.25;
+    col = mix(col, vec3(.012, .01, .018) + vec3(.32, .26, .36)*pow(fr, 3.)*.5, uSil);   // backlit: a black silhouette, no colour
     gl_FragColor = vec4(col, uOp); }`;
 const hex = h => new THREE.Color(h);
 export function makeFigure(name, accent) {
   const L = lookOf(name), acc = new THREE.Color(accent), mats = [];
   const mk = (hair) => { const m = new THREE.ShaderMaterial({ vertexShader: VS, fragmentShader: FS, transparent: false,
     uniforms: { uBoot: { value: hex(0xeeeae4) }, uSkirt: { value: hex(L.skirt) }, uTop: { value: hex(hair ? L.hair : L.top) }, uSkin: { value: hex(L.skin) },
-      uAcc: { value: acc }, uOp: { value: 1 }, uHair: { value: hair ? 1 : 0 } } }); mats.push(m); return m; };
+      uAcc: { value: acc }, uOp: { value: 1 }, uHair: { value: hair ? 1 : 0 }, uSil: { value: 0 } } }); mats.push(m); return m; };
   const g = new THREE.Group(), root = new THREE.Group(); g.add(root);
   const geo = new THREE.LatheGeometry(PROF.map(([r, y]) => new THREE.Vector2(r, y)), 40); geo.scale(1, 1, 0.74);
   const body = new THREE.Mesh(geo, mk(false)); root.add(body);
