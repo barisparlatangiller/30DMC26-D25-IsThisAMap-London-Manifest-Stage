@@ -8,14 +8,14 @@
 <meta name="theme-color" content="#0a0716">
 <link rel="preload" href="fonts/manrope-latin-800-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/manrope-latin-500-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link href="style.css?v=38" rel="stylesheet">
+<link href="style.css?v=39" rel="stylesheet">
 </head>
 <body>
 <div class="haze" aria-hidden="true"><i></i><i></i><i></i></div>
 <div id="stage" aria-label="The stage in 3D: each performer's light, and the floor each of them has covered so far. Drag to turn, scroll to zoom."></div>
 
 <header class="brand">
-  <div class="eb">#30DayMapChallenge <span>·</span> Day 25 <span>·</span> Is this a map?</div>
+  <div class="eb">#30DayMapChallenge <span>·</span> Day 25 <span>·</span> Is this a map? <a class="lang" href="tr/" hreflang="tr">TR</a></div>
   <h1>Is a stage <em>a map?</em></h1>
   <p class="sub"><b>Manifest</b> · <i>Intro &amp; Hileli</i> · live at OVO Arena Wembley, London</p>
 <section class="story" id="story">
@@ -89,11 +89,11 @@
     <p>Colour: every sample counts as 2 seconds of presence, strongest where she stands and gone 3.2 m away. Fresh footprints glow,
       then settle to a lasting trace. Where several performers share the floor, the spot takes the colour of whoever stood there longest; it gets brighter the more time was spent there in total.
       On top, every stop leaves a footprint: a circle in her colour wherever she stayed within 0.9 m, its area growing with the time she stood there (2 s small, 30 s about 2 m across). Stops of 20 s or more carry their duration.
-      Clear sightings count fully, approximate ones 0.6, silhouettes 0.4; moments when she is out of frame are left out and shown as a dashed ring.</p>
+      From 0:45, when the six can be told apart, every position counts, also while the camera looks elsewhere.</p>
     <div class="facts" id="facts"></div>
     <h3>Sync with the video</h3>
     <p>The positions were noted on a clock that drifts against the published video, so the map follows the video through ten anchor moments checked by eye
-      (platform, stairs, main stage, the solo, the regroup, the run, the front block, the final pose). The formations at 1:09, 2:31, 2:44, 3:33 and the run at 3:42 were read again from the video on 24 Nov. If the map runs ahead or behind on your screen, nudge it:</p>
+      (platform, stairs, main stage, the solo, the regroup, the run, the front block, the final pose). On 24 Nov every passage from 0:45 to the final pose was checked again against the video at ¼ speed, formation by formation. If the map runs ahead or behind on your screen, nudge it:</p>
     <div class="nudge"><button id="nudgeM" class="ghost pill">−0.5 s</button><b id="offv" class="mono">0.0 s</b><button id="nudgeP" class="ghost pill">+0.5 s</button>
       <label class="tog"><input id="unc" type="checkbox" checked> include uncertain moments</label></div>
     <p>The stage around the map is drawn after the video: the LED wall, the truss and moving lights, the edge light strips, the CO₂ jets at the moments they fire, the screens beside the stage (a live close-up camera of this 3D stage) and the crowd. The six are stylised figures in their own hair and costume colours. None of this is data; the colours on the floor and the positions are.</p>
@@ -105,6 +105,6 @@
   </div>
 </div>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
-<script type="module" src="app.js?v=69"></script>
+<script type="module" src="app.js?v=70"></script>
 </body>
 </html>

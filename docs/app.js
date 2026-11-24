@@ -9,7 +9,8 @@ import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js"
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { buildSet, updateSet, makeFigure, poseFigure } from "./set.js?v=4";
 
-const ZN = { platform: "Platform", merdiven: "Stairs", ana_sahne_on: "Main stage", runway: "Runway", on_blok: "Front block" };
+const ZN = document.documentElement.lang === "tr" ? { platform: "Platform", merdiven: "Merdiven", ana_sahne_on: "Ana sahne", runway: "Runway", on_blok: "Ön blok" }
+  : { platform: "Platform", merdiven: "Stairs", ana_sahne_on: "Main stage", runway: "Runway", on_blok: "Front block" };
 const CELL = 0.2, R = 3.2, TRAIL = 12, TAU = 18, FLOOR = 0.45, HPX = 10;     // heat cell (m), glow radius (m), heat texture px per m
 const $ = s => document.querySelector(s);
 // saturated versions of the members' colours: the floor map and the footprints must stay apart from each other
@@ -20,6 +21,7 @@ const rgba = (h, a) => { const [r, g, b] = hex(h); return `rgba(${r},${g},${b},$
 const SIL_END = 45.33;     // until here the six are black silhouettes against the screen; at 45.33 the front light shows who is who (dark at 45.30, lit at 45.35)
 const LIGHTS_ON = 26.05;   // video second when the whole stage lights up at once (checked frame by frame: dark at 26.0, lit at 26.1)
 const VID = new URLSearchParams(location.search).has("video");
+const TR = document.documentElement.lang === "tr", tx = (en, tr) => TR ? tr : en, ROOT = TR ? "../" : "";
 if (VID) document.body.classList.add("vid");
 
 const S = { d: null, t: 23, dt: 22, mode: "acc", unc: true, off: 0, on: new Set(), playing: false, yt: null, ytReady: false,
@@ -325,9 +327,9 @@ function update(now) {
 }
 function render(now) { stepFly(now); G.ctl.update(); update(now); G.comp.render(); drawPlan(); }
 // ── analysis: who owns which part of the stage (hex territory, formation timeline, one card each) ──
-const SECT = [["Platform", s => s[6] === "platform"], ["Stairs", s => s[6] === "merdiven"],
-  ["Main · left", s => s[6].startsWith("ana") && s[1] < 8], ["Main · centre", s => s[6].startsWith("ana") && s[1] >= 8 && s[1] <= 16], ["Main · right", s => s[6].startsWith("ana") && s[1] > 16],
-  ["Runway", s => s[6] === "runway"], ["Front · left", s => s[6] === "on_blok" && s[1] < 9], ["Front · centre", s => s[6] === "on_blok" && s[1] >= 9 && s[1] <= 15], ["Front · right", s => s[6] === "on_blok" && s[1] > 15]];
+const SECT = [["Platform", s => s[6] === "platform"], [tx("Stairs", "Merdiven"), s => s[6] === "merdiven"],
+  [tx("Main · left", "Ana · sol"), s => s[6].startsWith("ana") && s[1] < 8], [tx("Main · centre", "Ana · orta"), s => s[6].startsWith("ana") && s[1] >= 8 && s[1] <= 16], [tx("Main · right", "Ana · sağ"), s => s[6].startsWith("ana") && s[1] > 16],
+  ["Runway", s => s[6] === "runway"], [tx("Front · left", "Ön · sol"), s => s[6] === "on_blok" && s[1] < 9], [tx("Front · centre", "Ön · orta"), s => s[6] === "on_blok" && s[1] >= 9 && s[1] <= 15], [tx("Front · right", "Ön · sağ"), s => s[6] === "on_blok" && s[1] > 15]];
 const short = m => m.name.split(" ")[0], rgbA = (c, a) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
 function hiDPI(c, w, h) { const d = Math.min(2, window.devicePixelRatio || 1) * 1.5; c.width = w * d; c.height = h * d; const g = c.getContext("2d"); g.scale(d, d); return g; }
 function stageOutline(g, sc, ox, oy, a = 0.45) {
@@ -356,7 +358,7 @@ function analysis() {
     [["PLATFORM", 1.25], ["MAIN STAGE", 4.6], ["RUNWAY", 12.4], ["FRONT BLOCK", 16.6]].forEach(([t, y]) => g.fillText(t, (t === "RUNWAY" ? 8.5 : 0.35) * sc, y * sc + (t === "PLATFORM" ? 4 : 0)));
     g.textAlign = "center"; g.fillText("AUDIENCE", W / 2, W - 6); g.fillText("◀ LEFT", 0.9 * sc + 18, W - 6); g.fillText("RIGHT ▶", W - 0.9 * sc - 18, W - 6);
     const tot = own.reduce((a, b) => a + b, 0) || 1;
-    $("#tleg").innerHTML = `<div class="k">Hexagon size: time spent there · colour: who spent the most · white edge: shared, nobody above 45%</div>` +
+    $("#tleg").innerHTML = `<div class="k">${tx("Hexagon size: time spent there · colour: who spent the most · white edge: shared, nobody above 45%", "Altıgen boyu: orada geçen süre · renk: en çok kim durdu · beyaz kenar: paylaşılan, kimse %45'in üstünde değil")}</div>` +
       ms.map((m, i) => [m, own[i] / tot]).sort((a, b) => b[1] - a[1]).map(([m, f]) => `<div><i style="background:${m.color}"></i><b>${short(m)}</b><span class="bar"><b style="width:${(f * 100 / 0.3).toFixed(0)}%;background:${m.color}"></b></span><span>${(f * 100).toFixed(0)}%</span></div>`).join("");
   }
   // B · formation timeline: left-to-right position (x) through the song, one line each; crossings are the place changes
@@ -382,7 +384,7 @@ function analysis() {
   const stats = ms.map(m => ({ m, c: centre(m), f: front(m), d: distOf(m), lx: m.s.reduce((a, s) => a + s[1], 0) / m.s.length }));
   const rank = (key, i) => 1 + stats.filter(o => o[key] > stats[i][key]).length;
   $("#who").innerHTML = ms.map((m, i) => `<div class="wc"><h4><i style="background:${m.color}"></i>${m.name}</h4><canvas id="wp-${m.key}"></canvas>
-    <div class="chips"><span><b>${(100 * stats[i].c).toFixed(0)}%</b>centre stage<em>#${rank("c", i)}</em></span><span><b>${(100 * stats[i].f).toFixed(0)}%</b>at the front<em>#${rank("f", i)}</em></span><span><b>${Math.round(stats[i].d)} m</b>walked<em>#${rank("d", i)}</em></span></div>
+    <div class="chips"><span><b>${(100 * stats[i].c).toFixed(0)}%</b>${tx("centre stage", "sahne ortası")}<em>#${rank("c", i)}</em></span><span><b>${(100 * stats[i].f).toFixed(0)}%</b>${tx("at the front", "önde")}<em>#${rank("f", i)}</em></span><span><b>${Math.round(stats[i].d)} m</b>${tx("walked", "yürüdü")}<em>#${rank("d", i)}</em></span></div>
     <p id="ws-${m.key}"></p></div>`).join("");
   ms.forEach((m, i) => {
     const W = 260, g = hiDPI($(`#wp-${m.key}`), W, W), sc = W / S.d.w; g.fillStyle = "#0b0819"; g.fillRect(0, 0, W, W); stageOutline(g, sc, 0, 0, 0.3);
@@ -394,16 +396,16 @@ function analysis() {
       g.strokeStyle = "rgba(255,255,255,.75)"; g.lineWidth = 1.2; g.beginPath(); g.moveTo((ax - sx) * sc, ay * sc); g.lineTo((ax + sx) * sc, ay * sc); g.stroke();
       g.beginPath(); g.arc(ax * sc, ay * sc, 5.5, 0, Math.PI * 2); g.fillStyle = "#fff"; g.fill(); g.strokeStyle = m.color; g.lineWidth = 2.5; g.stroke(); }
     const sh = SECT.map(([lab, f]) => [lab, m.s.filter(f).length / m.s.length]).sort((a, b) => b[1] - a[1]);
-    const side = stats[i].lx < 10.5 ? "the left" : stats[i].lx > 13.5 ? "the right" : "the middle";
-    $(`#ws-${m.key}`).innerHTML = `Home: <b>${sh[0][0].toLowerCase()}</b> (${(100 * sh[0][1]).toFixed(0)}% of her song), then ${sh[1][0].toLowerCase()} (${(100 * sh[1][1]).toFixed(0)}%). Works <b>${side}</b> of the stage.`;
+    const side = stats[i].lx < 10.5 ? tx("the left", "solunda") : stats[i].lx > 13.5 ? tx("the right", "sağında") : tx("the middle", "ortasında");
+    $(`#ws-${m.key}`).innerHTML = TR ? `Evi: <b>${sh[0][0].toLowerCase()}</b> (şarkısının %${(100 * sh[0][1]).toFixed(0)}'i), sonra ${sh[1][0].toLowerCase()} (%${(100 * sh[1][1]).toFixed(0)}). Sahnenin <b>${side}</b> çalışıyor.` : `Home: <b>${sh[0][0].toLowerCase()}</b> (${(100 * sh[0][1]).toFixed(0)}% of her song), then ${sh[1][0].toLowerCase()} (${(100 * sh[1][1]).toFixed(0)}%). Works <b>${side}</b> of the stage.`;
   });
   // the three findings, written from the numbers
   const by = key => [...stats].sort((a, b) => b[key] - a[key]);
   const L = by("lx").slice(-1)[0], Rr = by("lx")[0];
   $("#finds").innerHTML = [
-    `<b style="color:${by("c")[0].m.color}">${short(by("c")[0].m)}</b> holds the centre most: ${(100 * by("c")[0].c).toFixed(0)}% of the song between the centre lines.`,
-    `<b style="color:${L.m.color}">${short(L.m)}</b> lives on the left, <b style="color:${Rr.m.color}">${short(Rr.m)}</b> on the right: the two edges of the line.`,
-    `<b style="color:${by("d")[0].m.color}">${short(by("d")[0].m)}</b> covers the most ground, about ${Math.round(by("d")[0].d)} m.`].map(t => `<div>${t}</div>`).join("");
+    `<b style="color:${by("c")[0].m.color}">${short(by("c")[0].m)}</b> ${tx(`holds the centre most: ${(100 * by("c")[0].c).toFixed(0)}% of the song between the centre lines.`, `ortada en çok duran: şarkının %${(100 * by("c")[0].c).toFixed(0)}'i orta çizgiler arasında.`)}`,
+    `<b style="color:${L.m.color}">${short(L.m)}</b> ${tx("lives on the left,", "solda,")} <b style="color:${Rr.m.color}">${short(Rr.m)}</b> ${tx("on the right: the two edges of the line.", "sağda: sıranın iki ucu.")}`,
+    `<b style="color:${by("d")[0].m.color}">${short(by("d")[0].m)}</b> ${tx(`covers the most ground, about ${Math.round(by("d")[0].d)} m.`, `en çok yol yürüyen, yaklaşık ${Math.round(by("d")[0].d)} m.`)}`].map(t => `<div>${t}</div>`).join("");
 }
 
 // the flat plan (top view), drawn next to the 3D stage
@@ -425,7 +427,7 @@ function drawPlan() {
 
 // ── cast chips ──
 function cast() {
-  $("#cast").innerHTML = S.d.members.map(m => `<div class="chip" data-k="${m.key}" style="--c:${m.color}" title="${m.path_m} m walked${m.rel ? ` · mostly stage ${m.rel.side} · next to ${m.rel.neighbour} ${m.rel.neighbour_pct}% of the time` : ""}">
+  $("#cast").innerHTML = S.d.members.map(m => `<div class="chip" data-k="${m.key}" style="--c:${m.color}" title="${TR ? `${m.path_m} m yürüdü${m.rel ? ` · zamanın %${m.rel.neighbour_pct}'inde ${m.rel.neighbour} yanında` : ""}` : `${m.path_m} m walked${m.rel ? ` · next to ${m.rel.neighbour} ${m.rel.neighbour_pct}% of the time` : ""}`}">
     <span class="dot"></span><span class="nm">${m.name.split(" ")[0]}</span><span class="zn" id="zn-${m.key}"></span></div>`).join("");
   $("#cast").querySelectorAll(".chip").forEach(c => c.onclick = () => {
     const k = c.dataset.k, all = S.on.size === S.d.members.length;
@@ -434,7 +436,7 @@ function cast() {
     S.dirty = true;
   });
 }
-function nowZones() { for (const m of S.d.members) { const p = pos(m, S.dt), el = document.getElementById(`zn-${m.key}`); if (el) el.textContent = (ZN[p.zone] || "") + (p.state === "g" ? " · off camera" : ""); } }
+function nowZones() { for (const m of S.d.members) { const p = pos(m, S.dt), el = document.getElementById(`zn-${m.key}`); if (el) el.textContent = (ZN[p.zone] || "") + ""; } }
 
 // ── the song as six lanes ──
 const T0 = 20, T1 = 300;
@@ -444,27 +446,35 @@ function lanes() {
   g.clearRect(0, 0, c.width, c.height); g.fillStyle = "rgba(255,255,255,.04)"; g.fillRect(0, 0, c.width, c.height);
   S.d.members.forEach((m, i) => { for (const s of m.s) { const a = s[5] === "n" ? 0.95 : s[5] === "y" ? 0.6 : s[5] === "s" ? 0.38 : 0.12;
     const x0 = X(toVideo(s[0] - 1)), x1 = X(toVideo(s[0] + 1)); g.fillStyle = rgba(m.color, a); g.fillRect(x0, i * lh + lh * 0.18, x1 - x0 + 0.6, lh * 0.64); } });
-  $("#marks").innerHTML = (S.d.moments || []).filter(m => m.t != null).map(m => `<span data-t="${m.t}" style="left:${(100 * (m.t - T0) / (T1 - T0)).toFixed(2)}%">${m.title}</span>`).join("");
+  $("#marks").innerHTML = (S.d.moments || []).filter(m => m.t != null).map(m => `<span data-t="${m.t}" style="left:${(100 * (m.t - T0) / (T1 - T0)).toFixed(2)}%">${TR ? m.title_tr || m.title : m.title}</span>`).join("");
   let prev = null; for (const el of $("#marks").children) { const b = el.getBoundingClientRect(); if (prev && b.left < prev.r + 8 && !prev.lo) { el.classList.add("lo"); prev = { r: b.right, lo: true }; } else prev = { r: b.right, lo: false }; }
 }
 function nowMoment() {
   const ms = (S.d.moments || []).filter(m => m.t != null); let cur = null; for (const m of ms) if (m.t <= S.t + 0.5) cur = m;
   const el = $("#cap");
   if (!cur || S.t > 302) el.classList.remove("on");
-  else { if (el.dataset.t !== String(cur.t)) { el.dataset.t = cur.t; el.classList.remove("on"); void el.offsetWidth; el.innerHTML = `<div class="k">${fmt(cur.t)}</div><b>${cur.title}</b><span>${cur.text}</span>`; } el.classList.add("on"); }
+  else { if (el.dataset.t !== String(cur.t)) { el.dataset.t = cur.t; el.classList.remove("on"); void el.offsetWidth; el.innerHTML = `<div class="k">${fmt(cur.t)}</div><b>${TR ? cur.title_tr || cur.title : cur.title}</b><span>${TR ? cur.text_tr || cur.text : cur.text}</span>`; } el.classList.add("on"); }
   document.querySelectorAll("#marks span").forEach(s => s.classList.toggle("cur", cur && +s.dataset.t === cur.t));
 }
 
 // ── YouTube: the video is the clock ──
 window.onYouTubeIframeAPIReady = () => {
   S.yt = new YT.Player("yt", { videoId: S.d.video, playerVars: { start: 20, playsinline: 1, rel: 0, modestbranding: 1 },
-    events: { onReady: () => { S.ytReady = true; $("#clockNote").textContent = "In sync: drag the timeline or tap a moment.";
-        if (!VID && !new URLSearchParams(location.search).has("still")) {          // start straight away; browsers only allow it muted
-          S.yt.mute(); S.yt.seekTo(Math.max(0, S.t - S.off), true); S.yt.playVideo();
-          $("#clockNote").textContent = "Playing muted: tap 🔊 in the video for sound. Drag the timeline or tap a moment."; } },
+    events: { onReady: () => { S.ytReady = true; $("#clockNote").textContent = tx("In sync: drag the timeline or tap a moment.", "Senkron: zaman çizelgesini sürükle ya da bir ana dokun.");
+        if (!VID && !new URLSearchParams(location.search).has("still")) {          // start straight away: with sound if the browser allows it,
+          S.yt.unMute(); S.yt.setVolume(100); S.yt.seekTo(Math.max(0, S.t - S.off), true); S.yt.playVideo();   // otherwise muted with a sound button
+          setTimeout(() => { const st = S.yt.getPlayerState(); if (st !== 1 && st !== 3) { S.yt.mute(); S.yt.playVideo(); } soundBtn(); }, 1500); } },
       onStateChange: e => { S.playing = e.data === 1; playIcon(); if (e.data === 1) S.anchor = null; },
-      onError: () => { S.ytReady = false; $("#clockNote").textContent = "Video unavailable here: the map runs on its own clock."; } } });
+      onError: () => { S.ytReady = false; $("#clockNote").textContent = tx("Video unavailable here: the map runs on its own clock.", "Video burada açılamıyor: harita kendi saatiyle akıyor."); } } });
 };
+function soundBtn() {            // a clear sound notice on the first visit; one tap turns the sound on at full volume
+  let b = document.getElementById("snd"); if (!b) { b = document.createElement("button"); b.id = "snd"; document.body.appendChild(b);
+    b.onclick = () => { S.yt.unMute(); S.yt.setVolume(100); if (!S.playing) S.yt.playVideo(); b.classList.add("on"); setTimeout(() => b.remove(), 1600); }; }
+  const muted = S.yt.isMuted();
+  b.innerHTML = muted ? (TR ? "🔇 Video sessiz başladı · <b>sesi aç 🔊</b>" : "🔇 The video started muted · <b>turn the sound on 🔊</b>")
+                      : (TR ? "🔊 Ses açık · müzik başlıyor" : "🔊 Sound is on · the music starts");
+  if (!muted) { b.classList.add("on"); setTimeout(() => b.remove(), 3500); }
+}
 function playIcon() { $("#playIcon").setAttribute("d", S.playing ? "M7 5h3.5v14H7zM13.5 5H17v14h-3.5z" : "M8 5v14l11-7z"); }
 function setT(t, seek) { S.t = Math.max(T0, Math.min(T1, t)); S.dirty = true; S.anchor = null; if (seek && S.ytReady) S.yt.seekTo(Math.max(0, S.t - S.off), true); }
 function frameUI(now) {
@@ -489,16 +499,17 @@ function loop(now) {
   frameUI(now);
   if (!VID) requestAnimationFrame(loop);
 }
+window.pos = pos; window.toData = toData;
 window.renderAt = (t, cam) => { S.t = t; if (cam) { G.fly = null; G.ctl.autoRotate = false; G.cam.position.set(...cam.p); G.ctl.target.set(...cam.t); } frameUI(t * 1000); };
 
 async function init() {
-  S.d = await fetch("data/stage.json?v=33").then(r => r.json());
+  S.d = await fetch(ROOT + "data/stage.json?v=34").then(r => r.json());
   for (const m of S.d.members) { m.pastel = m.color; m.color = VIVID[m.key] || m.color; }
   S.on = new Set(S.d.members.map(m => m.key));
   S.STOPS = stops();
   $("#nObs").textContent = S.d.kinds.gozlem;
   S.PATH = {}; for (const m of S.d.members) { S.PATH[m.key] = []; for (let t = S.d.t0; t <= S.d.t1 + 0.01; t += 0.25) { const p = pos(m, t); S.PATH[m.key].push([t, p.x, p.y, p.z]); } }
-  $("#facts").innerHTML = S.d.moments.filter(m => m.t == null).map(m => `<div class="fact"><b>${m.title}</b><span>${m.text}</span></div>`).join("");
+  $("#facts").innerHTML = S.d.moments.filter(m => m.t == null).map(m => `<div class="fact"><b>${TR ? m.title_tr || m.title : m.title}</b><span>${TR ? m.text_tr || m.text : m.text}</span></div>`).join("");
   initGrids(); cast(); buildScene(); resize();
   new ResizeObserver(resize).observe(G.el);
   if (!VID) { const tag = document.createElement("script"); tag.src = "https://www.youtube.com/iframe_api"; document.head.appendChild(tag); }
@@ -540,9 +551,12 @@ function setOn(keys) {
 }
 function setMode(md) { document.querySelectorAll(".modes button").forEach(x => x.classList.toggle("on", x.dataset.mode === md)); S.mode = md; S.dirty = true; }
 const M = n => S.d.members.find(m => m.name.startsWith(n));
-const FIND = [
+const FIND = TR ? [
+  { k: "Sueda", lab: "Liderlik el değiştiriyor", big: "%18", txt: "Ana sahnede en sık önde Sueda; altısı da sırayla uca geçiyor (Esin, Zeynep %12, Hilal %10, Mina, Lidya %8)" },
+  { k: "Hilal", lab: "En çok yol", big: "93 m", txt: "bir şarkıda yürüdü: 2:32'de sol uca gidip geri dönüyor (Mina: 64 m)" },
+  { k: "Esin", k2: "Lidya", lab: "Yan yana", big: "%57", txt: "şarkının bu kadarında Esin'in en yakın komşusu Lidya" }] : [
   { k: "Sueda", lab: "The lead changes hands", big: "18%", txt: "Sueda leads most often on the main stage; all six take the tip (Esin, Zeynep 12%, Hilal 10%, Mina, Lidya 8%)" },
-  { k: "Hilal", lab: "Most ground", big: "89 m", txt: "walked in one song, out to the far left at 2:32 and back (Mina: 62 m)" },
+  { k: "Hilal", lab: "Most ground", big: "93 m", txt: "walked in one song, out to the far left at 2:32 and back (Mina: 64 m)" },
   { k: "Esin", k2: "Lidya", lab: "Side by side", big: "57%", txt: "of the song Esin's nearest neighbour is Lidya" }];
 function story() {
   $("#fcards").innerHTML = FIND.map((f, i) => { const m = M(f.k); return `<button class="fcard" data-i="${i}" style="--c:${m.color}">
@@ -561,12 +575,15 @@ function tour(k) {
   S.ts = k; box.hidden = false; document.body.classList.add("touring");
   const su = M("Sueda"), hi = M("Hilal"), c = m => `<b style="color:${m.color}">${m.name.split(" ")[0]}</b>`;
   const steps = [
-    { t: 28, v: "audience", on: null, md: "acc", txt: `0:27 · Out of the dark, <b>six silhouettes on a raised platform</b>, 3.3 m up. At 0:45 the light shows who is who. Lidya and Sueda lead the way down the stairs at 0:57. Each colour is one member; wherever she stands still, a circle grows.` },
-    { t: 222, v: "top", on: null, md: "all", txt: `1:04–3:42 · The main stage. The formation keeps changing and so does its tip: <b>all six take their turn in front</b>. ${c(su)} most often (18%), then ${c(M("Esin"))} and ${c(M("Zeynep"))} (12%), ${c(hi)} (10%), ${c(M("Mina"))} and ${c(M("Lidya"))} (8%).` },
-    { t: 270, v: "top", on: [hi.key], md: "all", txt: `${c(hi)} walks the most, <b>89 m</b>: at 2:32 she crosses to the far left end of the line and at 2:41 comes back to the middle. From 3:48 all six hold the front block, in a zigzag from 4:25. Press play to watch it with the video, or tap a name below.` }];
+    { t: 28, v: "audience", on: null, md: "acc", txt: tx(`0:27 · Out of the dark, <b>six silhouettes on a raised platform</b>, 3.3 m up. At 0:45 the light shows who is who. Lidya and Sueda lead the way down the stairs at 0:57. Each colour is one member; wherever she stands still, a circle grows.`,
+      `0:27 · Karanlıktan <b>yükseltilmiş platformda altı siyah siluet</b> çıkıyor, 3,3 m yukarıda. 0:45'te ışık kimin kim olduğunu gösteriyor. 0:57'de merdivenden ilk Lidya ve Sueda iniyor. Her renk bir üye; durduğu yerde bir daire büyüyor.`) },
+    { t: 222, v: "top", on: null, md: "all", txt: tx(`1:04–3:42 · The main stage. The formation keeps changing and so does its tip: <b>all six take their turn in front</b>. ${c(su)} most often (18%), then ${c(M("Esin"))} and ${c(M("Zeynep"))} (12%), ${c(hi)} (10%), ${c(M("Mina"))} and ${c(M("Lidya"))} (8%).`,
+      `1:04–3:42 · Ana sahne. Dizilim sürekli değişiyor, ucu da: <b>altısı da sırayla öne geçiyor</b>. En sık ${c(su)} (%18), sonra ${c(M("Esin"))} ve ${c(M("Zeynep"))} (%12), ${c(hi)} (%10), ${c(M("Mina"))} ve ${c(M("Lidya"))} (%8).`) },
+    { t: 270, v: "top", on: [hi.key], md: "all", txt: tx(`${c(hi)} walks the most, <b>93 m</b>: at 2:32 she crosses to the far left end of the line and at 2:41 comes back to the middle. From 3:48 all six hold the front block, in a zigzag from 4:25. Press play to watch it with the video, or tap a name below.`,
+      `En çok ${c(hi)} yürüyor, <b>93 m</b>: 2:32'de sıranın sol ucuna geçiyor, 2:41'de ortaya dönüyor. 3:48'den itibaren altısı ön blokta, 4:25'ten sonra zigzag halinde. Videoyla birlikte izlemek için oynat ya da aşağıdan bir isme dokun.`) }];
   const st = steps[k]; setT(st.t, true); setView(st.v); setOn(st.on); setMode(st.md);
-  $("#tstep").textContent = `Tour · ${k + 1} / 3`; $("#ttext").innerHTML = st.txt;
-  $("#tback").disabled = k === 0; $("#tnext").textContent = k === 2 ? "explore ✓" : "next →";
+  $("#tstep").textContent = `${tx("Tour", "Tur")} · ${k + 1} / 3`; $("#ttext").innerHTML = st.txt;
+  $("#tback").disabled = k === 0; $("#tnext").textContent = k === 2 ? tx("explore ✓", "keşfet ✓") : tx("next →", "ileri →");
 }
 window.APP25 = { tour, setOn, setMode };
 init();

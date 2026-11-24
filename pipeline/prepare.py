@@ -378,19 +378,25 @@ for nm, ks in K5.items():
         r[1] = round(float(np.interp(v, kt, kx)), 2); r[2] = round(float(np.interp(v, kt, ky)), 2); r[6] = "ana_sahne_on"
 
 # 7f) the front block, 3:48-4:56, with Barış (24 Nov): one line Esin · Mina · Lidya · Sueda · Zeynep · Hilal that slowly moves
-#    forward until 4:25 (Mina and Lidya swap at 3:58); 4:25-4:46 a zigzag, Esin, Mina, Zeynep in front and Lidya, Sueda, Hilal
+#    forward at 3:51 to near the front edge (Mina and Lidya swap at 3:58); 4:25-4:46 a zigzag, Esin, Mina, Zeynep in front and Lidya, Sueda, Hilal
 #    one row back; 4:46 one line again, 4:48 close together around the centre for the final pose.
 XS = {"Esin": 7.0, "Lidya": 9.0, "Mina": 11.0, "Sueda": 13.0, "Zeynep Oktay": 15.0, "Hilal": 17.0}
-FIN = {"Esin": 8.5, "Lidya": 9.9, "Mina": 11.3, "Sueda": 12.7, "Zeynep Oktay": 14.1, "Hilal": 15.5}
-ZZ = {"Esin": 21.0, "Mina": 21.0, "Zeynep Oktay": 21.0, "Lidya": 20.0, "Sueda": 20.0, "Hilal": 20.0}
+FIN = {"Esin": 10.0, "Lidya": 10.8, "Mina": 11.6, "Sueda": 12.4, "Zeynep Oktay": 13.2, "Hilal": 14.0}     # shoulder to shoulder
+ZZ = {"Esin": 22.4, "Mina": 22.4, "Zeynep Oktay": 22.4, "Lidya": 21.4, "Sueda": 21.4, "Hilal": 21.4}
 for nm in XS:
     x0 = {"Mina": 9.0, "Lidya": 11.0}.get(nm, XS[nm])           # before the 3:58 swap
-    ks = [(228.5, x0, 17.0), (237.5, x0, 17.4), (238.5, XS[nm], 17.5), (265.0, XS[nm], 20.5), (266.5, XS[nm], ZZ[nm]),
-          (286.0, XS[nm], ZZ[nm]), (287.0, XS[nm], 20.5), (288.5, FIN[nm], 20.5), (296.0, FIN[nm], 20.5)]
+    ks = [(228.5, x0, 17.0), (231.0, x0, 17.0), (234.0, x0, 22.0), (237.5, x0, 22.0), (238.5, XS[nm], 22.0),     # 3:51 they walk on to near the front edge
+          (265.0, XS[nm], 22.0), (266.5, XS[nm], ZZ[nm]), (286.0, XS[nm], ZZ[nm]), (287.0, XS[nm], 22.0), (288.5, FIN[nm], 22.0), (296.0, FIN[nm], 22.0)]
     kt = np.array([k[0] for k in ks]); kx = np.array([k[1] for k in ks]); ky = np.array([k[2] for k in ks])
     for r, v in zip(byname[nm]["s"], _vt):
         if v < 228.45: continue
         r[1] = round(float(np.interp(v, kt, kx)), 2); r[2] = round(float(np.interp(v, kt, ky)), 2); r[6] = "on_blok"
+
+# 7g) every place from 0:45 on was read with Barış from the video, so none counts as "not visible" any more: footprints,
+#    paths and the colour map use them all (24 Nov; Esin's run down the runway had no footprints).
+for m in members:
+    for r, v in zip(m["s"], _vt):
+        if v >= 45.3 and r[5] == "g": r[5] = "y"; r[4] = max(r[4], 0.6)
 
 # 8) every place sits on a corner of a 25 cm grid (24 Nov, with Barış). The grid is aligned with the national grid (EPSG:27700,
 #    multiples of 0.25 m), so the same corners can be snapped to in QGIS (layer › Digitizing › geometry precision 0.25).
@@ -467,8 +473,6 @@ def moments(d):
     hid = sorted(((int((~V[i]).sum() * 2), first(m)) for i, m in enumerate(M)), reverse=True)
     out.append({"t": None, "title": "Who covers the most ground",
                 "text": f"{walk[0][1]} walks {walk[0][0]:.0f} m, {walk[-1][1]} {walk[-1][0]:.0f} m."})
-    out.append({"t": None, "title": "Hard to follow",
-                "text": f"The camera loses {hid[0][1]} for {hid[0][0]} s, {hid[-1][1]} for only {hid[-1][0]} s. Those moments stay out of the colour map."})
     for o in out:
         if o["t"] is not None:
             o["t"] = round(vw(o["t"]), 1)
@@ -522,6 +526,48 @@ def relations(d):
 out["moments"] = moments(out)
 rel, ncnt = relations(out)
 out["moments"] += rel
+
+
+def _loc(tm, abl=False):
+    """Turkish locative/ablative suffix for a clock time like 2:33 → 2:33'te, 3:48 → 3:48'den"""
+    d = tm[-1]; one = {"1": "de", "2": "de", "3": "te", "4": "te", "5": "te", "6": "da", "7": "de", "8": "de", "9": "da"}
+    ten = {"1": "da", "2": "de", "3": "da", "4": "ta", "5": "de", "0": "da"}
+    sx = one[d] if d != "0" else ten[tm[-2]]
+    return f"{tm}'{sx}{'n' if abl else ''}"
+
+
+def to_tr(m):
+    """the Turkish page reads the same moments; numbers and names come from the English text"""
+    import re
+    t, x = m["title"], m["text"]; n = re.findall(r"\d+(?:\.\d+)?(?::\d\d)?", x)
+    if t == "Six on the platform":
+        return "Platformda altı kişi", f"Şarkı altı üyeyle, zeminden {n[0]} m yüksekteki platformda açılıyor; merkezlerine ortalama {n[1]} m uzaklıktalar: şarkının en sıkı dizilimi."
+    if t == "Down the stairs":
+        who = x.split(" lead the way")[0].replace(" and ", " ve ") if "lead the way" in x else x.split(" is the first")[0]
+        return "Merdivenden iniş", f"{who} {_loc(n[0])} ilk inenler. {_loc(n[1])} platform boşalıyor."
+    if t == "The main stage":
+        return "Ana sahne", f"{n[0]} dk {n[1]} sn boyunca, {n[2]} ile {n[3]} arasında, ana sahne bütün dünya. Ön kenarındaki parlak bant altısının şarkının çoğunu geçirdiği yer."
+    if t == "The run":
+        return "Koşu", f"{_loc(n[0])} altısı birlikte {n[1]} m'lik runway'i yaklaşık {n[2]} saniyede geçiyor."
+    if t == "In front of the crowd":
+        return "Seyircinin önünde", f"{_loc(n[0], True)} sona kadar altısı seyirciye en yakın ön blokta ({n[1]} sn)."
+    if t == "Widest formation":
+        return "En geniş dizilim", f"{_loc(n[0])} sıra en geniş halinde: merkezden ortalama {n[1]} m, açılıştakinden {n[2]} kat geniş."
+    if t == "Who covers the most ground":
+        a = re.findall(r"(\w+) walks (\d+) m, (\w+) (\d+) m", x)[0]
+        return "En çok yol", f"{a[0]} {a[1]} m yürüyor, {a[2]} {a[3]} m."
+    if t == "The line-up":
+        return "Sıralama", "Seyirciden bakınca soldan sağa ortalama sıra " + x.split("order is ")[1].split(";")[0] + "; dizilimler bu sırayı sürekli karıştırıyor."
+    if t == "The lead changes hands":
+        return "Liderlik el değiştiriyor", "Ana sahnede dizilimin ucu sürekli el değiştiriyor: " + x.split("moving: ")[1].split(" of the time")[0].replace("%", "") .replace(", ", "%, ").rstrip() + "%. Altısı da sırayla öne geçiyor."
+    if t == "Always side by side":
+        return "Hep yan yana", x.split(" are each other")[0].replace(" and ", " ve ") + " şarkının çoğunda birbirinin en yakın komşusu."
+    return t, x
+import re as _re
+for m_ in out["moments"]:
+    a_, b_ = to_tr(m_)
+    b_ = _re.sub(r"(\d+)%", r"%\1", b_); b_ = _re.sub(r"(\d)\.(\d)", r"\1,\2", b_)      # %18, 3,3 m
+    m_["title_tr"], m_["text_tr"] = a_, b_
 out["rel_samples"] = ncnt
 (OUT / "stage.json").write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":")))
 for m in out["moments"]:

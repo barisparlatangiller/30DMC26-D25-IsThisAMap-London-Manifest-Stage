@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sahne bir harita mı? Manifest, Wembley</title>
+<meta name="description" content="#30DayMapChallenge 2026 · 25. gün · Bu bir harita mı? Manifest'in altı üyesi, OVO Arena Wembley sahnesinde konser videosuyla senkron haritada. Şarkı kendi haritasını çiziyor.">
+<meta name="theme-color" content="#0a0716">
+<link rel="preload" href="../fonts/manrope-latin-800-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../fonts/manrope-latin-500-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link href="../style.css?v=39" rel="stylesheet">
+</head>
+<body>
+<div class="haze" aria-hidden="true"><i></i><i></i><i></i></div>
+<div id="stage" aria-label="3B sahne: her üyenin ışığı ve şimdiye kadar dolaştığı zemin. Döndürmek için sürükle, yakınlaştırmak için kaydır."></div>
+
+<header class="brand">
+  <div class="eb">#30DayMapChallenge <span>·</span> 25. gün <span>·</span> Bu bir harita mı? <a class="lang" href="../" hreflang="en">EN</a></div>
+  <h1>Sahne bir <em>harita mı?</em></h1>
+  <p class="sub"><b>Manifest</b> · <i>Intro &amp; Hileli</i> · OVO Arena Wembley, Londra, canlı</p>
+<section class="story" id="story">
+  <p class="who6"><b>Manifest</b> altı kişilik bir Türk kız grubu. Altısını bir canlı şarkı boyunca her 2 saniyede bir takip edip metre ölçekli bir sahne planına yerleştirdim. Böylece şarkı, futbol maçlarındaki oyuncu ısı haritaları gibi kendi haritasını çiziyor.</p>
+  <h2>Sahne kimin?</h2>
+  <div class="fc" id="fcards"></div>
+  <button id="tour" class="tourbtn">▶ 30 saniyelik turu başlat</button>
+</section>
+</header>
+
+<div id="tourbox" hidden><div class="tstep" id="tstep"></div><div id="ttext"></div><div class="tnav"><button id="tback">← geri</button><button id="tclose">bitir ✕</button><button id="tnext" class="pri">ileri →</button></div></div>
+
+<aside class="vcard" id="vcard">
+  <div class="vhead"><span class="live"><i></i>LIVE</span><span>OVO Arena Wembley</span><button id="vmin" class="ghost" title="Videoyu gizle" aria-label="Videoyu gizle">–</button></div>
+  <div class="video"><div id="yt"></div></div>
+  <div class="vnote" id="clockNote">Oynat: harita videoyu takip ediyor.</div>
+</aside>
+
+<div class="views" role="group" aria-label="Kamera">
+  <button data-view="top" class="on">Plan</button><button data-view="audience">Seyirci</button><button data-view="side">Yan</button><button data-view="orbit">Tur</button>
+  <span class="hint">döndürmek için sürükle · yakınlaştırmak için kaydır</span>
+</div>
+<div class="modes" role="group" aria-label="Renkler neyi gösteriyor">
+  <button data-mode="acc" class="on">Ayak izleri</button><button data-mode="trail">Son 12 sn</button><button data-mode="all">Bütün şarkı</button>
+</div>
+
+<div class="fpkey" aria-hidden="true"><i class="s"></i><i class="m"></i><i class="l"></i><span>ayak izleri: durduğu yer · büyük = uzun</span></div>
+<div class="lower3" id="cap" aria-live="polite"></div>
+<figure class="plancard"><figcaption>Plan · üstten</figcaption><canvas id="plan"></canvas></figure>
+
+<div class="cast" id="cast"></div>
+
+<footer class="dock">
+  <button id="play" class="play" aria-label="Oynat"><svg viewBox="0 0 24 24"><path id="playIcon" d="M8 5v14l11-7z"/></svg></button>
+  <div class="clock"><b id="clock">0:23</b><small>/ 4:56</small></div>
+  <div class="track" id="track">
+    <div class="marks" id="marks"></div>
+    <canvas id="lanes"></canvas>
+    <div class="head" id="head"></div>
+    <input id="time" type="range" min="20" max="300" step="0.05" value="23" aria-label="Şarkıda zaman">
+  </div>
+  <div class="speed" role="group" aria-label="Oynatma hızı"><button data-r="1" class="on">1×</button><button data-r="0.5">½×</button><button data-r="0.25">¼×</button></div>
+  <button id="anaBtn" class="ghost pill">Sahne kimin</button>
+  <button id="about" class="ghost pill">Nasıl yapıldı</button>
+</footer>
+
+<div class="drawer" id="ana" hidden>
+  <div class="dpanel wide ana">
+    <button id="aclose" class="ghost x" aria-label="Kapat">×</button>
+    <div class="eb">Analiz · bütün şarkı · seyirciden bakınca</div>
+    <h2>Sahnenin hangi kısmı kimin</h2>
+    <div class="finds" id="finds"></div>
+    <div class="anaTop">
+      <figure><figcaption>Bölge</figcaption><canvas id="terr"></canvas></figure>
+      <figure><figcaption>Dizilim, 0:27 → 4:56</figcaption><canvas id="tline"></canvas></figure>
+      <div class="tleg" id="tleg"></div>
+    </div>
+    <div class="who" id="who"></div>
+    <p class="fine">Haritayla aynı konumlardan: her 2 saniyede bir, videodan okundu. Altıgenler 0,55 m; her okuma 3,2 m'ye yayılıyor. Sahne ortası = ortadaki 6 m; ön = ön blok ve ana sahnenin ön kenarı. Beyaz nokta: sahnenin her bölümündeki ortalama yeri, çizgi: sağa sola ne kadar açıldığı. Spor analitiğinden esinlendi: NBA bölge şut haritaları ve futboldaki ortalama pozisyon haritaları.</p>
+  </div>
+</div>
+<div class="drawer" id="drawer" hidden>
+  <div class="dpanel">
+    <button id="dclose" class="ghost x" aria-label="Kapat">×</button>
+    <div class="eb">Yöntem ve bulgular</div>
+    <h2>Şarkı nasıl haritaya dönüştü</h2>
+    <p>Her 2 saniyede bir her üyenin yeri konser videosundan okundu (<b id="nObs"></b> doğrudan gözlem, gerisi ara değer) ve yaklaşık 24 × 24 m'lik bir sahne planına yerleştirildi: +3,3 m'de merdivenli bir platform, ana sahne, 7,5 m'lik runway ve 18 m'lik ön blok. 2 saniyelik okumalar arasında üyeler yumuşak bir eğri üzerinde ilerliyor. Arka dansçılar gri figürler olarak çizildi, tek tek haritalanmadı.</p>
+    <p>Renk: her okuma 2 saniyelik bir varlık sayılıyor; durduğu yerde en güçlü, 3,2 m ötede sıfır. Birkaç üyenin paylaştığı zeminde renk, orada en uzun duranın rengi; toplam süre arttıkça parlaklaşıyor. Üstte her durak bir ayak izi bırakıyor: 0,9 m içinde kaldığı her yerde, kaldığı süreyle büyüyen bir daire. 20 saniye ve üstü duraklarda süre yazıyor. 0:45'ten itibaren, altısı ayırt edilebildiği andan sonra, kamera başka yere baksa da her konum sayılıyor.</p>
+    <div class="facts" id="facts"></div>
+    <h3>Videoyla senkron</h3>
+    <p>Konumlar yayımlanan videoya göre kayan bir saatle not edildi; harita videoyu gözle kontrol edilmiş on çapa an üzerinden takip ediyor. 24 Kasım'da 0:45'ten final pozuna kadar her bölüm videoyla ¼ hızda, dizilim dizilim yeniden kontrol edildi. Harita ekranında önde ya da geride kalıyorsa kaydır:</p>
+    <div class="nudge"><button id="nudgeM" class="ghost pill">−0,5 sn</button><b id="offv" class="mono">0.0 s</b><button id="nudgeP" class="ghost pill">+0,5 sn</button>
+      <label class="tog"><input id="unc" type="checkbox" checked> belirsiz anları da kat</label></div>
+    <p>Haritanın çevresindeki sahne videoya göre çizildi: LED duvar, truss ve hareketli ışıklar, kenar ışık şeritleri, ateşlendikleri anlarda CO₂ jetleri, sahne yanındaki ekranlar (bu 3B sahnenin canlı yakın çekimi) ve seyirci. Altı üye kendi saç ve kostüm renklerinde stilize figürler. Bunların hiçbiri veri değil; zemindeki renkler ve konumlar veri.</p>
+    <p class="fine">Tuşlar: boşluk oynat/durdur · ← → 2 sn · , . kaydır. Konumlar tahmindir, ölçülmüş koordinat değildir; sahne boyutu yaklaşıktır.
+      Video: Manifest'in resmi canlı performansı, YouTube oynatıcısıyla; tüm haklar sanatçılara ve hak sahiplerine aittir.
+      Plan ve konumlar: Barış Parlatangiller. Claude ile yapıldı.
+      <a href="https://github.com/barisparlatangiller/30DMC26-D25-IsThisAMap-London-Manifest-Stage" target="_blank" rel="noopener">Kod ve veri</a> ·
+      <a href="https://barisparlatangiller.github.io/" target="_blank" rel="noopener">30 haritanın hepsi</a></p>
+  </div>
+</div>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<script type="module" src="../app.js?v=70"></script>
+</body>
+</html>
