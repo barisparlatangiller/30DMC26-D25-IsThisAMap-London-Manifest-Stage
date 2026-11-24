@@ -230,10 +230,30 @@ for m in members:
                 hx = round(sum(q[1] for q in nxt[:2]) / 2, 2); hy = round(sum(q[2] for q in nxt[:2]) / 2, 2)
         r[1], r[2] = hx, hy; k += 1
 
+# 7) the descent, 0:55-1:05, step by step with Barış (24 Nov, video at ¼ speed): Lidya and Sueda go first, Lidya leading and Sueda
+#    behind her, down the centre towards the front of the main stage. Esin and Mina follow, then Zeynep, then Hilal; Mina is the
+#    slowest of the four. At 1:04 the six stand as an arrow: Lidya at the tip, Sueda right behind her, Zeynep and Hilal a step
+#    back, Esin and Mina at the back corners. Keyframes in video seconds: (t, x, y).
+DESC = {
+    "Lidya":        [(56.0, 8.6, 1.6), (56.8, 10.0, 2.7), (58.0, 11.2, 3.8), (59.5, 12.0, 5.0), (61.0, 12.0, 6.0), (64.0, 12.0, 7.0)],
+    "Sueda":        [(56.0, 15.6, 1.6), (56.8, 14.0, 2.7), (58.0, 12.8, 3.6), (59.5, 12.0, 4.3), (61.0, 12.0, 5.1), (64.0, 12.0, 6.1)],
+    "Esin":         [(59.5, 9.8, 1.6), (60.0, 10.0, 2.7), (61.0, 9.4, 4.3), (64.0, 8.6, 4.6)],
+    "Mina":         [(59.5, 14.1, 1.6), (60.2, 14.0, 2.7), (61.5, 14.3, 3.4), (62.5, 14.8, 4.3), (64.0, 15.4, 4.6)],
+    "Zeynep Oktay": [(60.0, 11.3, 1.6), (60.5, 11.0, 2.7), (61.0, 10.9, 3.6), (62.0, 10.5, 4.5), (64.0, 10.3, 5.4)],
+    "Hilal":        [(60.5, 12.6, 1.6), (61.0, 12.9, 2.7), (62.0, 13.5, 4.2), (64.0, 13.7, 5.4)],
+}
+for nm, ks in DESC.items():
+    kt = np.array([k[0] for k in ks]); kx = np.array([k[1] for k in ks]); ky = np.array([k[2] for k in ks])
+    for r, v in zip(byname[nm]["s"], _vt):
+        if not (55.5 <= v <= 67.0): continue
+        r[1] = round(float(np.interp(v, kt, kx)), 2); r[2] = round(float(np.interp(v, kt, ky)), 2)
+        r[6] = "platform" if r[2] < 2.5 else "merdiven" if r[2] < 4.0 else "ana_sahne_on"
+        r[3] = 3.3 if r[6] == "platform" else round(1.8 + (4.0 - r[2]), 2) if r[6] == "merdiven" else 1.8
+
 # 6) formations read from the video by Barış (24 Nov), seen from the audience: x left → right, y toward the crowd.
 #    Inside each window (video seconds) the six stand as listed; 1 s at each edge blends from and back to the notes.
 F = {
-    "v_0109": ((67.5, 70.5), {"Sueda": (12.0, 7.3), "Zeynep Oktay": (10.2, 6.3), "Hilal": (13.8, 6.3), "Esin": (8.6, 5.3), "Lidya": (12.0, 5.0), "Mina": (15.4, 5.3)}),
+    "v_0109": ((67.0, 70.5), {"Sueda": (12.0, 7.3), "Zeynep Oktay": (10.2, 6.3), "Hilal": (13.8, 6.3), "Esin": (8.6, 5.3), "Lidya": (12.0, 4.4), "Mina": (15.4, 5.3)}),   # from 1:06 Lidya walks to the very back, Sueda to the tip
     "w_0231": ((150.5, 162.5), {"Zeynep Oktay": (4.6, 6.8), "Sueda": (6.6, 6.8), "Hilal": (12.0, 7.3), "Esin": (12.0, 5.2), "Lidya": (17.4, 6.8), "Mina": (19.4, 6.8)}),
     "l_0244": ((163.5, 170.0), {"Hilal": (12.0, 7.3), "Esin": (7.4, 5.2), "Zeynep Oktay": (9.2, 5.2), "Sueda": (11.0, 5.2), "Lidya": (13.9, 5.2), "Mina": (15.7, 5.2)}),
     "final":  ((289.5, 296.0), {"Esin": (8.5, 19.2), "Lidya": (9.9, 19.2), "Mina": (11.3, 19.2), "Sueda": (12.7, 19.2), "Zeynep Oktay": (14.1, 19.2), "Hilal": (15.5, 19.2)}),
@@ -276,26 +296,6 @@ for va, vb, span in SPREAD:
         xs = [m["s"][k][1] for m in members]; c = (max(xs) + min(xs)) / 2
         for j, m in enumerate(sorted(members, key=lambda m: m["s"][k][1])):
             r = m["s"][k]; tx = min(23.0, max(1.0, c + (j - 2.5) * span / 5)); r[1] = round(r[1] + a * (tx - r[1]), 2)
-
-# 7) the descent, 0:55-1:05, step by step with Barış (24 Nov, video at ¼ speed): Lidya and Sueda go first, Lidya leading and Sueda
-#    behind her, down the centre towards the front of the main stage. Esin and Mina follow, then Zeynep, then Hilal; Mina is the
-#    slowest of the four. At 1:04 the six stand as an arrow: Lidya at the tip, Sueda right behind her, Zeynep and Hilal a step
-#    back, Esin and Mina at the back corners. Keyframes in video seconds: (t, x, y).
-DESC = {
-    "Lidya":        [(56.0, 8.6, 1.6), (56.8, 10.0, 2.7), (58.0, 11.2, 3.8), (59.5, 12.0, 5.0), (61.0, 12.0, 6.0), (64.0, 12.0, 7.0)],
-    "Sueda":        [(56.0, 15.6, 1.6), (56.8, 14.0, 2.7), (58.0, 12.8, 3.6), (59.5, 12.0, 4.3), (61.0, 12.0, 5.1), (64.0, 12.0, 6.1)],
-    "Esin":         [(59.5, 9.8, 1.6), (60.0, 10.0, 2.7), (61.0, 9.4, 4.3), (64.0, 8.6, 4.6)],
-    "Mina":         [(59.5, 14.1, 1.6), (60.2, 14.0, 2.7), (61.5, 14.3, 3.4), (62.5, 14.8, 4.3), (64.0, 15.4, 4.6)],
-    "Zeynep Oktay": [(60.0, 11.3, 1.6), (60.5, 11.0, 2.7), (61.0, 10.9, 3.6), (62.0, 10.5, 4.5), (64.0, 10.3, 5.4)],
-    "Hilal":        [(60.5, 12.6, 1.6), (61.0, 12.9, 2.7), (62.0, 13.5, 4.2), (64.0, 13.7, 5.4)],
-}
-for nm, ks in DESC.items():
-    kt = np.array([k[0] for k in ks]); kx = np.array([k[1] for k in ks]); ky = np.array([k[2] for k in ks])
-    for r, v in zip(byname[nm]["s"], _vt):
-        if not (55.5 <= v <= 66.5): continue
-        r[1] = round(float(np.interp(v, kt, kx)), 2); r[2] = round(float(np.interp(v, kt, ky)), 2)
-        r[6] = "platform" if r[2] < 2.5 else "merdiven" if r[2] < 4.0 else "ana_sahne_on"
-        r[3] = 3.3 if r[6] == "platform" else round(1.8 + (4.0 - r[2]), 2) if r[6] == "merdiven" else 1.8
 
 # 8) every place sits on a corner of a 25 cm grid (24 Nov, with Barış). The grid is aligned with the national grid (EPSG:27700,
 #    multiples of 0.25 m), so the same corners can be snapped to in QGIS (layer › Digitizing › geometry precision 0.25).
